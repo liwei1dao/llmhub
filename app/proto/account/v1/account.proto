@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package llmhub.account.v1;
+
+option go_package = "github.com/llmhub/llmhub/proto/gen/go/account/v1;accountv1";
+
+// AccountService provides internal RPCs used by the gateway for API key
+// authentication and user lookup on the hot path.
+service AccountService {
+  rpc AuthenticateAPIKey(AuthenticateAPIKeyRequest) returns (AuthenticateAPIKeyResponse);
+  rpc GetUser(GetUserRequest) returns (User);
+}
+
+message AuthenticateAPIKeyRequest {
+  string key = 1;
+  string client_ip = 2;
+}
+
+message AuthenticateAPIKeyResponse {
+  bool   valid = 1;
+  int64  user_id = 2;
+  int64  api_key_id = 3;
+  repeated string scopes = 4;
+  string reject_reason = 5;
+}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message User {
+  int64  id = 1;
+  string email = 2;
+  string status = 3;
+  int32  qps_limit = 4;
+  int64  daily_spend_limit_cents = 5;
+}

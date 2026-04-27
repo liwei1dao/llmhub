@@ -1,0 +1,22 @@
+{
+  "name": "basic_two_inputs",
+  "inputs": ["hello", "world"],
+  "model": "deepseek-embedding",
+  "upstream": {
+    "status": 200,
+    "body": {
+      "object": "list",
+      "data": [
+        { "object": "embedding", "index": 0, "embedding": [0.1, 0.2, 0.3] },
+        { "object": "embedding", "index": 1, "embedding": [-0.1, 0.0, 0.4] }
+      ],
+      "model": "deepseek-embedding",
+      "usage": { "prompt_tokens": 4, "total_tokens": 4 }
+    }
+  },
+  "expect": {
+    "vectors": 2,
+    "first_dim": 3,
+    "input_tokens": 4
+  }
+}

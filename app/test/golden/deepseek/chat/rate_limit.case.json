@@ -1,0 +1,22 @@
+{
+  "name": "rate_limited",
+  "input": {
+    "model": "deepseek-chat",
+    "messages": [
+      { "role": "user", "content": "hi" }
+    ]
+  },
+  "upstream": {
+    "status": 429,
+    "body": {
+      "error": {
+        "code": "RateLimitExceeded",
+        "type": "rate_limit",
+        "message": "qps exceeded"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "rate_limited", "code": "DEEPSEEK_RateLimitExceeded" }
+  }
+}

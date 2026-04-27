@@ -1,0 +1,22 @@
+{
+  "name": "auth_failed",
+  "input": {
+    "model": "ep-doubao-pro-32k",
+    "messages": [
+      { "role": "user", "content": "hi" }
+    ]
+  },
+  "upstream": {
+    "status": 401,
+    "body": {
+      "error": {
+        "code": "AccountFrozen",
+        "type": "auth_error",
+        "message": "account frozen"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "unauthorized", "code": "VOLC_AccountFrozen" }
+  }
+}

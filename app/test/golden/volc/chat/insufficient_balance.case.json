@@ -1,0 +1,22 @@
+{
+  "name": "insufficient_balance",
+  "input": {
+    "model": "ep-doubao-pro-32k",
+    "messages": [
+      { "role": "user", "content": "hi" }
+    ]
+  },
+  "upstream": {
+    "status": 402,
+    "body": {
+      "error": {
+        "code": "InsufficientBalance",
+        "type": "billing",
+        "message": "balance depleted"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "insufficient_balance", "code": "VOLC_InsufficientBalance" }
+  }
+}

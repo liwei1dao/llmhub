@@ -1,0 +1,17 @@
+# Development overlay. Loaded automatically when env=dev.
+# Values here target docker-compose services in deploy/docker-compose.yml.
+
+db:
+  dsn: postgres://llmhub:llmhub@localhost:5432/llmhub?sslmode=disable
+
+redis:
+  addr: localhost:6379
+  db: 0
+
+nats:
+  url: nats://localhost:4222
+
+vault:
+  addr: http://localhost:8200
+  token: dev-root-token
+  mount_path: secret/pool

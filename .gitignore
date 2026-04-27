@@ -1,0 +1,55 @@
+# Binaries
+bin/
+dist/
+*.exe
+*.test
+*.out
+*.prof
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Go
+vendor/
+coverage.out
+coverage.html
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+pnpm-lock.yaml.backup
+
+# Logs
+*.log
+logs/
+
+# Secrets
+secrets/
+*.pem
+*.key
+
+# Local data
+.data/
+pgdata/
+redisdata/
+natsdata/
+
+# Generated (keep proto generated committed — change if you prefer not to)
+# internal/*/repo/gen/
+
+# Buf
+buf.lock

@@ -1,0 +1,66 @@
+id: volc
+display_name: 火山方舟
+
+base_url: https://ark.cn-beijing.volces.com/api/v3
+
+auth:
+  mode: bearer
+  header: Authorization
+
+protocol_family: openai_compat
+
+supported_capabilities:
+  - chat
+  - embedding
+  - asr
+  - tts
+  - vlm
+  - image_generation
+
+models:
+  chat:
+    - logical_id: gpt-4o-class
+      upstream: ep-doubao-pro-32k
+      pricing:
+        input_per_1k_cents: 0.80
+        output_per_1k_cents: 2.00
+    - logical_id: deepseek-r1-class
+      upstream: ep-deepseek-r1
+      pricing:
+        input_per_1k_cents: 0.40
+        output_per_1k_cents: 1.60
+
+  embedding:
+    - logical_id: text-embedding-class
+      upstream: ep-doubao-embedding
+      pricing:
+        input_per_1k_cents: 0.05
+
+  tts:
+    - logical_id: tts-class-hd
+      upstream: BV002_streaming
+      pricing:
+        per_1k_chars_cents: 5.00
+
+  asr:
+    - logical_id: asr-class
+      upstream: volc-asr-v1
+      pricing:
+        per_60_seconds_cents: 2.50
+
+error_mapping:
+  RateLimitExceeded: rate_limited
+  InsufficientBalance: depleted
+  AccountFrozen: banned
+
+quota_query:
+  type: api
+  endpoint: /billing/usage
+
+probe:
+  chat:
+    model: ep-doubao-pro-32k
+    test_prompt: "hi"
+  tts:
+    voice: BV002_streaming
+    test_text: "ok"

@@ -1,0 +1,22 @@
+{
+  "name": "auth_failed",
+  "input": {
+    "model": "claude-sonnet-4-5",
+    "messages": [
+      { "role": "user", "content": "hi" }
+    ]
+  },
+  "upstream": {
+    "status": 401,
+    "body": {
+      "type": "error",
+      "error": {
+        "type": "authentication_error",
+        "message": "invalid x-api-key"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "unauthorized", "code": "ANTH_authentication_error" }
+  }
+}

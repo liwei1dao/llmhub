@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_USER: llmhub
+          POSTGRES_PASSWORD: llmhub
+          POSTGRES_DB: llmhub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U llmhub"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      nats:
+        image: nats:2-alpine
+        ports:
+          - 4222:4222
+
+    env:
+      LLMHUB_DB_DSN: postgres://llmhub:llmhub@localhost:5432/llmhub?sslmode=disable
+      LLMHUB_REDIS_ADDR: localhost:6379
+      LLMHUB_NATS_URL: nats://localhost:4222
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: app/go.sum
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: app
+
+      - name: build
+        run: make build
+
+      - name: unit tests
+        run: go test ./... -race -count=1
+
+      - name: golden protocol conformance (mandatory)
+        run: make test-golden
+
+  proto:
+    name: Proto lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/proto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+      - run: buf lint
+      - run: buf format -d
+
+  web:
+    name: Web lint & typecheck
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [www, console, admin]
+    defaults:
+      run:
+        working-directory: app/web/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: app/web/${{ matrix.app }}/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile || pnpm install
+      - run: pnpm lint --if-present
+      - run: pnpm typecheck --if-present

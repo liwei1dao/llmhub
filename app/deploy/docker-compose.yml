@@ -1,0 +1,62 @@
+# Local development dependencies for LLMHub.
+#
+# Usage:
+#   make dev-up      # start postgres + redis + nats + vault
+#   make dev-down    # stop and clean up
+#
+# Services run on localhost and match configs/app.dev.yaml.
+
+name: llmhub-dev
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: llmhub-postgres
+    environment:
+      POSTGRES_USER: llmhub
+      POSTGRES_PASSWORD: llmhub
+      POSTGRES_DB: llmhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.data/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llmhub -d llmhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: llmhub-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./.data/redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  nats:
+    image: nats:2-alpine
+    container_name: llmhub-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./.data/natsdata:/data
+
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: llmhub-vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    command: server -dev

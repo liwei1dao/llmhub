@@ -1,0 +1,60 @@
+# Declarative capability domain catalog.
+# This list is loaded on startup and reconciled into catalog.capabilities.
+
+capabilities:
+  - id: chat
+    category: llm
+    display_name: 对话生成
+    billing_unit: token
+    transports: [http, sse]
+
+  - id: embedding
+    category: llm
+    display_name: 向量化
+    billing_unit: token
+    transports: [http]
+
+  - id: asr
+    category: audio
+    display_name: 语音识别
+    billing_unit: second
+    sub_modes: [batch, streaming]
+    transports: [http, websocket]
+
+  - id: tts
+    category: audio
+    display_name: 语音合成
+    billing_unit: char
+    sub_modes: [non_streaming, streaming]
+    transports: [http, sse, websocket]
+
+  - id: translate_text
+    category: translation
+    display_name: 文本翻译
+    billing_unit: char
+    transports: [http]
+
+  - id: translate_realtime
+    category: translation
+    display_name: 实时端到端翻译
+    billing_unit: second
+    sub_modes: [speech_to_text, speech_to_speech]
+    transports: [websocket, webrtc]
+
+  - id: image_generation
+    category: vision
+    display_name: 图像生成
+    billing_unit: image
+    transports: [http]
+
+  - id: vlm
+    category: vision
+    display_name: 视觉理解
+    billing_unit: token
+    transports: [http, sse]
+
+  - id: ocr
+    category: vision
+    display_name: 文字识别
+    billing_unit: page
+    transports: [http]

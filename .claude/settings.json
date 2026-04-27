@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(GOPROXY=https://proxy.golang.org,direct go mod download)",
+      "Bash(GOPROXY=https://proxy.golang.org,direct go build ./...)",
+      "Bash(GOPROXY=https://proxy.golang.org,direct go vet ./...)",
+      "Bash(echo \"vet exit: $?\")",
+      "Bash(GOPROXY=https://proxy.golang.org,direct go build -o /tmp/llmhub-build-check ./cmd/gateway)",
+      "Bash(GOPROXY=https://proxy.golang.org,direct make build)",
+      "Bash(GOPROXY=https://proxy.golang.org,direct go test ./... -count=1)",
+      "Bash(GOPROXY=https://proxy.golang.org,direct make test-golden)",
+      "Bash(echo \"build exit: $?\")"
+    ],
+    "additionalDirectories": [
+      "/Users/liwei/work/pr/llmhub"
+    ]
+  }
+}

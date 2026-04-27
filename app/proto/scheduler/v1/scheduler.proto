@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package llmhub.scheduler.v1;
+
+option go_package = "github.com/llmhub/llmhub/proto/gen/go/scheduler/v1;schedulerv1";
+
+// SchedulerService selects upstream pool accounts for inbound calls and
+// receives feedback after the calls complete.
+service SchedulerService {
+  rpc Pick(PickRequest) returns (PickResponse);
+  rpc Report(ReportRequest) returns (ReportResponse);
+  rpc MarkAccount(MarkAccountRequest) returns (MarkAccountResponse);
+}
+
+enum RiskLevel {
+  RISK_LEVEL_LOW = 0;
+  RISK_LEVEL_MEDIUM = 1;
+  RISK_LEVEL_HIGH = 2;
+}
+
+enum Tier {
+  TIER_UNSPECIFIED = 0;
+  TIER_T1 = 1;
+  TIER_T2 = 2;
+  TIER_T3 = 3;
+  TIER_T4 = 4;
+}
+
+message PickRequest {
+  string request_id = 1;
+  int64  user_id = 2;
+  string capability_id = 3;    // chat / asr / tts / ...
+  string model_id = 4;         // logical model id
+  string provider_hint = 5;    // optional: force a specific provider
+  string voice_id = 6;         // for tts / realtime_translate
+  int32  estimated_units = 7;  // units depend on capability billing unit
+  RiskLevel risk_level = 8;
+  string session_key = 9;      // for session stickiness
+  repeated int64 exclude_account_ids = 10;
+}
+
+message PickResponse {
+  string provider_id = 1;
+  int64  account_id = 2;
+  string upstream_model = 3;
+  string vault_ref = 4;
+  string endpoint_override = 5;
+  Tier   tier = 6;
+  string pick_token = 7;       // opaque token for correlated Report
+}
+
+enum ReportResult {
+  REPORT_RESULT_UNSPECIFIED = 0;
+  REPORT_RESULT_SUCCESS = 1;
+  REPORT_RESULT_UPSTREAM_ERROR = 2;
+  REPORT_RESULT_RATE_LIMITED = 3;
+  REPORT_RESULT_AUTH_FAILED = 4;
+  REPORT_RESULT_TIMEOUT = 5;
+}
+
+message ReportRequest {
+  string request_id = 1;
+  string pick_token = 2;
+  int64  account_id = 3;
+  ReportResult result = 4;
+  int32  http_status = 5;
+  string error_code = 6;
+  int32  tokens_in = 7;
+  int32  tokens_out = 8;
+  int32  duration_ms = 9;
+}
+
+message ReportResponse {}
+
+message MarkAccountRequest {
+  int64 account_id = 1;
+  string to_state = 2;
+  string reason = 3;
+}
+
+message MarkAccountResponse {}

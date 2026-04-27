@@ -1,0 +1,42 @@
+{
+  "name": "basic_hello",
+  "input": {
+    "model": "ep-doubao-pro-32k",
+    "messages": [
+      { "role": "user", "content": "hello" }
+    ]
+  },
+  "upstream": {
+    "status": 200,
+    "body": {
+      "id": "chatcmpl-volc-1",
+      "object": "chat.completion",
+      "created": 1730000000,
+      "model": "ep-doubao-pro-32k",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "hi there" },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "input_tokens": 5, "output_tokens": 2, "total_tokens": 7 }
+    }
+  },
+  "expect": {
+    "response": {
+      "id": "chatcmpl-volc-1",
+      "object": "chat.completion",
+      "created": 1730000000,
+      "model": "ep-doubao-pro-32k",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "hi there" },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "input_tokens": 5, "output_tokens": 2, "total_tokens": 7 }
+    }
+  }
+}

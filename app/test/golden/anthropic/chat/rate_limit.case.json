@@ -1,0 +1,22 @@
+{
+  "name": "rate_limited",
+  "input": {
+    "model": "claude-sonnet-4-5",
+    "messages": [
+      { "role": "user", "content": "hi" }
+    ]
+  },
+  "upstream": {
+    "status": 429,
+    "body": {
+      "type": "error",
+      "error": {
+        "type": "rate_limit_error",
+        "message": "Number of request tokens has exceeded your per-minute rate limit"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "rate_limited", "code": "ANTH_rate_limit_error" }
+  }
+}

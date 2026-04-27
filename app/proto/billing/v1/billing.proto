@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package llmhub.billing.v1;
+
+option go_package = "github.com/llmhub/llmhub/proto/gen/go/billing/v1;billingv1";
+
+// BillingService handles balance freeze / settle / release and usage queries.
+service BillingService {
+  rpc Freeze(FreezeRequest) returns (FreezeResponse);
+  rpc Settle(SettleRequest) returns (SettleResponse);
+  rpc Release(ReleaseRequest) returns (ReleaseResponse);
+  rpc QueryUsage(QueryUsageRequest) returns (QueryUsageResponse);
+}
+
+message BillingEstimate {
+  string unit = 1;              // token / second / char / image / page / call
+  double estimated_units = 2;
+  int64  estimated_cents = 3;   // hundredths of a cent for precision
+}
+
+message FreezeRequest {
+  string request_id = 1;
+  int64  user_id = 2;
+  string capability_id = 3;
+  string model_id = 4;
+  BillingEstimate estimate = 5;
+}
+
+message FreezeResponse {
+  bool   accepted = 1;
+  int64  frozen_cents = 2;
+  int64  balance_after_cents = 3;
+  string reject_reason = 4;
+}
+
+message UsageReport {
+  int32  tokens_in = 1;
+  int32  tokens_out = 2;
+  double audio_seconds = 3;
+  int32  characters = 4;
+  int32  images = 5;
+  int32  pages = 6;
+}
+
+message SettleRequest {
+  string request_id = 1;
+  string provider_id = 2;
+  string upstream_model = 3;
+  UsageReport usage = 4;
+  int64  wholesale_cents = 5;
+}
+
+message SettleResponse {
+  int64 retail_cents = 1;
+  int64 balance_after_cents = 2;
+}
+
+message ReleaseRequest {
+  string request_id = 1;
+  string reason = 2;
+}
+
+message ReleaseResponse {}
+
+message QueryUsageRequest {
+  int64  user_id = 1;
+  string range = 2;  // "today" / "7d" / "30d"
+  string capability_id = 3;
+}
+
+message UsageBucket {
+  string day = 1;
+  string capability_id = 2;
+  int64  calls = 3;
+  int64  cost_cents = 4;
+}
+
+message QueryUsageResponse {
+  repeated UsageBucket buckets = 1;
+}

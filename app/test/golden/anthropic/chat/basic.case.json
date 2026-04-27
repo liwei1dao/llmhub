@@ -1,0 +1,38 @@
+{
+  "name": "basic_hello",
+  "input": {
+    "model": "claude-sonnet-4-5",
+    "messages": [
+      { "role": "user", "content": "hello" }
+    ]
+  },
+  "upstream": {
+    "status": 200,
+    "body": {
+      "id": "msg_01abc",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-4-5",
+      "content": [
+        { "type": "text", "text": "Hello there!" }
+      ],
+      "stop_reason": "end_turn",
+      "usage": { "input_tokens": 8, "output_tokens": 4 }
+    }
+  },
+  "expect": {
+    "response": {
+      "id": "msg_01abc",
+      "object": "chat.completion",
+      "model": "claude-sonnet-4-5",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "Hello there!" },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "input_tokens": 8, "output_tokens": 4, "total_tokens": 12 }
+    }
+  }
+}

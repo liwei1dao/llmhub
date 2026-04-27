@@ -1,0 +1,22 @@
+{
+  "name": "rate_limited",
+  "input": {
+    "model": "ep-doubao-pro-32k",
+    "messages": [
+      { "role": "user", "content": "hello" }
+    ]
+  },
+  "upstream": {
+    "status": 429,
+    "body": {
+      "error": {
+        "code": "RateLimitExceeded",
+        "type": "rate_limit",
+        "message": "qps too high"
+      }
+    }
+  },
+  "expect": {
+    "error": { "kind": "rate_limited", "code": "VOLC_RateLimitExceeded" }
+  }
+}

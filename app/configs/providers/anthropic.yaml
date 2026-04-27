@@ -1,0 +1,31 @@
+id: anthropic
+display_name: Anthropic
+
+base_url: https://api.anthropic.com
+
+auth:
+  mode: bearer
+  header: x-api-key
+
+protocol_family: anthropic
+
+supported_capabilities:
+  - chat
+
+models:
+  chat:
+    - logical_id: claude-sonnet-class
+      upstream: claude-sonnet-4-5
+      pricing:
+        input_per_1k_cents: 3.00
+        output_per_1k_cents: 15.00
+    - logical_id: claude-haiku-class
+      upstream: claude-haiku-4-5
+      pricing:
+        input_per_1k_cents: 0.80
+        output_per_1k_cents: 4.00
+
+probe:
+  chat:
+    model: claude-haiku-4-5
+    test_prompt: "hi"

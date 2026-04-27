@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LLMHub · 大模型算力聚合平台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'PingFang SC', 'Microsoft YaHei'] },
+        colors: {
+          brand: {
+            50:  '#f0f7ff',
+            100: '#e0efff',
+            500: '#3b82f6',
+            600: '#2563eb',
+            700: '#1d4ed8',
+            900: '#1e3a8a'
+          },
+          ink: { 900:'#0b1220', 800:'#111827', 700:'#1f2937', 500:'#6b7280', 400:'#9ca3af', 200:'#e5e7eb' }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter','PingFang SC','Microsoft YaHei',sans-serif; background:#fafbff; }
+  .glow { background: radial-gradient(1200px 500px at 50% -50px, rgba(59,130,246,.25), transparent 60%); }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(99,102,241,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99,102,241,.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .gradient-border { background: linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899) padding-box, linear-gradient(135deg,#3b82f6,#ec4899) border-box; border: 1px solid transparent; }
+  .provider-chip { transition: all .2s ease; }
+  .provider-chip:hover { transform: translateY(-2px); }
+  .tab-btn.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  @keyframes pulse-dot { 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+  .live-dot { animation: pulse-dot 1.6s infinite; }
+  @keyframes rise { from { transform: translateY(8px); opacity: 0 } to { transform:none; opacity:1 } }
+  .rise { animation: rise .4s ease both; }
+  .bar { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+  .bar > span { display:block; height:100%; background: linear-gradient(90deg,#3b82f6,#8b5cf6); }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+  .code-win { background:#0b1220; border-radius:14px; }
+  .code-win pre { color:#e5e7eb; font-family: ui-monospace, Menlo, monospace; font-size:13px; line-height:1.7; }
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body class="text-ink-900">
+
+<!-- ========= 顶部导航 ========= -->
+<header class="sticky top-0 z-30 backdrop-blur bg-white/75 border-b border-ink-200/60">
+  <nav class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-8">
+      <a href="#" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white font-bold">L</div>
+        <span class="font-semibold text-lg">LLMHub</span>
+        <span class="text-[10px] text-ink-500 border border-ink-200 rounded px-1.5 py-0.5">PREVIEW</span>
+      </a>
+      <div class="hidden md:flex items-center gap-6 text-sm text-ink-700">
+        <a href="#capabilities" class="hover:text-brand-600">能力矩阵</a>
+        <a href="#features" class="hover:text-brand-600">功能特性</a>
+        <a href="#providers" class="hover:text-brand-600">已接入厂商</a>
+        <a href="#pricing" class="hover:text-brand-600">定价</a>
+        <a href="#console" class="hover:text-brand-600">平台预览</a>
+        <a href="#docs" class="hover:text-brand-600">文档</a>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="#" class="text-sm text-ink-700 hover:text-brand-600">登录</a>
+      <a href="#" class="text-sm px-4 py-2 rounded-lg bg-ink-900 text-white hover:bg-ink-700">免费注册</a>
+    </div>
+  </nav>
+</header>
+
+<!-- ========= Hero ========= -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 grid-bg opacity-70"></div>
+  <div class="absolute inset-0 glow"></div>
+  <div class="relative max-w-7xl mx-auto px-6 pt-20 pb-16">
+    <div class="flex flex-col items-center text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-ink-200 text-xs text-ink-700 mb-6">
+        <span class="dot bg-green-500 live-dot"></span>
+        <span>聚合 6 家厂商 · 9 大 AI 能力域 · 40+ 模型/音色</span>
+      </div>
+
+      <h1 class="text-5xl md:text-6xl font-bold tracking-tight leading-tight max-w-4xl">
+        一次接入，<span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-purple-600">全栈 AI 能力</span><br/>
+        按量计费的 AI 能力聚合平台
+      </h1>
+      <p class="mt-6 text-lg text-ink-500 max-w-2xl">
+        不止 LLM —— 对话、语音识别、语音合成、端到端翻译、图像生成、视觉理解一站搞定。
+        免企业合约、免套餐门槛、充多少用多少。一个 <span class="mono text-brand-600">base_url</span> 接入所有能力。
+      </p>
+
+      <div class="mt-8 flex flex-col sm:flex-row gap-3">
+        <a href="#" class="px-6 py-3 rounded-xl bg-ink-900 text-white font-medium hover:bg-ink-700 flex items-center gap-2">
+          免费开始 · 送 ¥10 体验额度
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#console" class="px-6 py-3 rounded-xl bg-white border border-ink-200 font-medium hover:border-brand-500 hover:text-brand-600">
+          查看平台效果
+        </a>
+      </div>
+
+      <div class="mt-10 flex items-center gap-8 text-sm text-ink-500">
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>
+          99.9% SLA
+        </div>
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>
+          故障自动切换
+        </div>
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>
+          企业发票
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据条 -->
+    <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="rounded-xl bg-white border border-ink-200 p-5">
+        <div class="text-3xl font-bold">9<span class="text-base text-ink-500 font-normal">&nbsp;类</span></div>
+        <div class="text-sm text-ink-500 mt-1">AI 能力域</div>
+      </div>
+      <div class="rounded-xl bg-white border border-ink-200 p-5">
+        <div class="text-3xl font-bold">40+<span class="text-base text-ink-500 font-normal"></span></div>
+        <div class="text-sm text-ink-500 mt-1">模型/音色</div>
+      </div>
+      <div class="rounded-xl bg-white border border-ink-200 p-5">
+        <div class="text-3xl font-bold">&lt;500<span class="text-base text-ink-500 font-normal">&nbsp;ms</span></div>
+        <div class="text-sm text-ink-500 mt-1">故障切换时间</div>
+      </div>
+      <div class="rounded-xl bg-white border border-ink-200 p-5">
+        <div class="text-3xl font-bold">30%<span class="text-base text-ink-500 font-normal">&nbsp;↓</span></div>
+        <div class="text-sm text-ink-500 mt-1">对比直接购买套餐</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 能力域矩阵 ========= -->
+<section id="capabilities" class="py-20 bg-gradient-to-b from-white to-slate-50">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-12">
+      <div class="text-sm text-brand-600 font-medium">CAPABILITY MATRIX</div>
+      <h2 class="text-3xl md:text-4xl font-bold mt-2">全栈 AI 能力，一个平台</h2>
+      <p class="text-ink-500 mt-3">从文本到语音，从翻译到多模态 —— 统一协议、统一计费、统一账单</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- LLM Chat -->
+      <div class="group rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative overflow-hidden">
+        <div class="absolute top-3 right-3"><span class="badge bg-emerald-50 text-emerald-700">MVP</span></div>
+        <div class="w-11 h-11 rounded-xl bg-blue-50 text-brand-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <h3 class="font-semibold">对话生成</h3>
+        <div class="text-xs text-ink-500 mt-1">Chat · Tool Use · Streaming</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按 Token 计费</div>
+      </div>
+      <!-- Embedding -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-blue-50 text-blue-700">V1</span></div>
+        <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 9l-5-4M12 9l5-4M12 15l-5 4M12 15l5 4"/></svg>
+        </div>
+        <h3 class="font-semibold">向量 Embedding</h3>
+        <div class="text-xs text-ink-500 mt-1">文本向量化 · 语义检索</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按 Token 计费</div>
+      </div>
+      <!-- ASR -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-blue-50 text-blue-700">V1</span></div>
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4M8 22h8"/></svg>
+        </div>
+        <h3 class="font-semibold">语音识别 ASR</h3>
+        <div class="text-xs text-ink-500 mt-1">批量 / 流式 · 多语种</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按音频秒数计费</div>
+      </div>
+      <!-- TTS -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-blue-50 text-blue-700">V1</span></div>
+        <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10v4M7 8v8M12 5v14M17 8v8M21 10v4"/></svg>
+        </div>
+        <h3 class="font-semibold">语音合成 TTS</h3>
+        <div class="text-xs text-ink-500 mt-1">高清音色 · 情感控制 · 克隆</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按字符数计费</div>
+      </div>
+      <!-- Translate text -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-blue-50 text-blue-700">V1</span></div>
+        <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8h6M8 6v2M7 12l2 4 2-4M14 16l4-8 4 8M15 14h6"/></svg>
+        </div>
+        <h3 class="font-semibold">文本翻译</h3>
+        <div class="text-xs text-ink-500 mt-1">专用 MT / LLM 翻译 · 术语表</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按字符数计费</div>
+      </div>
+      <!-- Realtime Translation -->
+      <div class="rounded-2xl bg-white border-2 border-dashed border-brand-500 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-brand-50 text-brand-700">V2 · 差异化</span></div>
+        <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+        </div>
+        <h3 class="font-semibold">端到端同传</h3>
+        <div class="text-xs text-ink-500 mt-1">语音→语音 · 保音色 · 低延迟</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按通话秒数计费</div>
+      </div>
+      <!-- Image generation -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-amber-50 text-amber-700">V2</span></div>
+        <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+        </div>
+        <h3 class="font-semibold">图像生成</h3>
+        <div class="text-xs text-ink-500 mt-1">文生图 / 图生图 / 编辑</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按张数 × 分辨率</div>
+      </div>
+      <!-- VLM -->
+      <div class="rounded-2xl bg-white border border-ink-200 p-5 hover:shadow-lg transition relative">
+        <div class="absolute top-3 right-3"><span class="badge bg-blue-50 text-blue-700">V1</span></div>
+        <div class="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3 class="font-semibold">视觉理解 VLM</h3>
+        <div class="text-xs text-ink-500 mt-1">图片问答 / OCR / 视频理解</div>
+        <div class="mt-3 text-[11px] text-ink-500 mono">按 Token 计费</div>
+      </div>
+    </div>
+
+    <div class="mt-10 rounded-2xl bg-slate-900 text-slate-100 p-8">
+      <div class="flex items-start gap-6 flex-col md:flex-row">
+        <div class="md:w-1/3">
+          <div class="text-amber-300 text-xs font-semibold tracking-wide">LLMHub 独家能力</div>
+          <h3 class="text-2xl font-bold mt-2">能力域自由组合</h3>
+          <p class="text-slate-300 text-sm mt-3 leading-relaxed">
+            上游厂商只卖单一能力，LLMHub 在网关层做流水线编排 ——
+            一个同传调用自动组合 ASR + MT + TTS，一个会议纪要自动组合 ASR + Chat。
+            你只需要关心"要做什么"，不需要关心"调谁的 API"。
+          </p>
+        </div>
+        <div class="flex-1 grid grid-cols-1 gap-3 text-sm">
+          <div class="rounded-xl bg-slate-800/60 border border-slate-700 p-4 flex items-center gap-4">
+            <span class="badge bg-emerald-500/20 text-emerald-300">同传</span>
+            <code class="mono text-xs text-slate-300">ASR(火山) → MT(DeepL) → TTS(ElevenLabs克隆音色)</code>
+            <span class="ml-auto text-xs text-slate-400">&lt; 2.5s 首合成音</span>
+          </div>
+          <div class="rounded-xl bg-slate-800/60 border border-slate-700 p-4 flex items-center gap-4">
+            <span class="badge bg-blue-500/20 text-blue-300">会议纪要</span>
+            <code class="mono text-xs text-slate-300">ASR(分段) → Chat(总结+动作项) → Embedding(归档)</code>
+            <span class="ml-auto text-xs text-slate-400">3 步一个 API</span>
+          </div>
+          <div class="rounded-xl bg-slate-800/60 border border-slate-700 p-4 flex items-center gap-4">
+            <span class="badge bg-purple-500/20 text-purple-300">智能客服</span>
+            <code class="mono text-xs text-slate-300">ASR(流式) → Chat(工具调用) → TTS(流式)</code>
+            <span class="ml-auto text-xs text-slate-400">端到端全双工</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 功能特性 ========= -->
+<section id="features" class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="text-sm text-brand-600 font-medium">FEATURES</div>
+      <h2 class="text-3xl md:text-4xl font-bold mt-2">为什么选择 LLMHub</h2>
+      <p class="text-ink-500 mt-3">不只是路由器，更是一套面向中小团队的大模型算力供给方案</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- card -->
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-blue-50 text-brand-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">统一协议兼容</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          一套 API 调遍全平台。兼容 OpenAI + Anthropic 协议，现有 SDK 零改动迁移。
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">分层账号池调度</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          企业套餐 / 个人付费 / 免费额度分层管理，按调用风险智能分配，高价值流量走高稳定通道。
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-green-50 text-emerald-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">故障毫秒级切换</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          上游 429 / 5xx 自动熔断，立即换同等级账号重试，用户几乎无感知。
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">透明计费 · 预扣冻结</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          调用前预扣，成功后按实际 Token 结算。每笔调用可追溯，账单与上游实时对账。
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2C20 17.5 12 22 12 22z"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">企业合规 · 发票齐全</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          对公收款、增值税发票、审计日志、IP 白名单、消费上限——B 端该有的都有。
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-ink-200 p-6 hover:shadow-lg transition">
+        <div class="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg">实时用量可观测</h3>
+        <p class="text-ink-500 mt-2 text-sm leading-relaxed">
+          调用明细、Token 消耗、响应延迟、错误率全维度看板。API Key 粒度的预算控制。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 已接入厂商 ========= -->
+<section id="providers" class="py-20">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-12">
+      <div class="text-sm text-brand-600 font-medium">PROVIDERS</div>
+      <h2 class="text-3xl md:text-4xl font-bold mt-2">已接入的大模型厂商</h2>
+      <p class="text-ink-500 mt-3">持续扩展中 · 新热点模型 48 小时内上线</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <!-- 可替换为真实 logo -->
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center">
+        <div class="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold">火山</div>
+        <div class="mt-3 font-medium text-sm">火山方舟</div>
+        <div class="text-[11px] text-ink-500 mt-1">豆包 · DeepSeek-R1</div>
+      </div>
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">DS</div>
+        <div class="mt-3 font-medium text-sm">DeepSeek</div>
+        <div class="text-[11px] text-ink-500 mt-1">V3 · R1</div>
+      </div>
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center">
+        <div class="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">百炼</div>
+        <div class="mt-3 font-medium text-sm">阿里百炼</div>
+        <div class="text-[11px] text-ink-500 mt-1">Qwen · QVQ</div>
+      </div>
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center">
+        <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">智谱</div>
+        <div class="mt-3 font-medium text-sm">智谱 AI</div>
+        <div class="text-[11px] text-ink-500 mt-1">GLM-4.5</div>
+      </div>
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">AC</div>
+        <div class="mt-3 font-medium text-sm">Anthropic</div>
+        <div class="text-[11px] text-ink-500 mt-1">Claude 4.x</div>
+      </div>
+      <div class="provider-chip bg-white border border-ink-200 rounded-xl p-5 flex flex-col items-center border-dashed">
+        <div class="w-12 h-12 rounded-xl bg-ink-100 text-ink-400 flex items-center justify-center font-bold">+</div>
+        <div class="mt-3 font-medium text-sm text-ink-500">更多中</div>
+        <div class="text-[11px] text-ink-400 mt-1">欢迎建议</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 平台预览（Tabs） ========= -->
+<section id="console" class="py-20 bg-gradient-to-b from-white to-slate-50">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-10">
+      <div class="text-sm text-brand-600 font-medium">PRODUCT PREVIEW</div>
+      <h2 class="text-3xl md:text-4xl font-bold mt-2">平台效果预览</h2>
+      <p class="text-ink-500 mt-3">用户控制台 · 运营后台 · 完整产品形态</p>
+    </div>
+
+    <div class="flex justify-center mb-6">
+      <div class="inline-flex p-1 bg-slate-100 rounded-xl text-sm">
+        <button class="tab-btn active px-4 py-2 rounded-lg font-medium" data-tab="console">用户控制台</button>
+        <button class="tab-btn px-4 py-2 rounded-lg font-medium text-ink-500" data-tab="admin">运营后台（账号池）</button>
+        <button class="tab-btn px-4 py-2 rounded-lg font-medium text-ink-500" data-tab="dispatcher">调度器洞察</button>
+      </div>
+    </div>
+
+    <!-- ========== 用户控制台 ========== -->
+    <div id="tab-console" class="tab-panel active">
+      <div class="rounded-2xl shadow-xl bg-white border border-ink-200 overflow-hidden">
+        <!-- 伪浏览器 chrome -->
+        <div class="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 border-b border-ink-200">
+          <span class="w-3 h-3 rounded-full bg-red-400"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400"></span>
+          <span class="ml-4 text-xs text-ink-500 mono">console.llmhub.io/dashboard</span>
+        </div>
+
+        <div class="flex">
+          <!-- sidebar -->
+          <aside class="w-56 shrink-0 border-r border-ink-200 py-4 bg-slate-50/60">
+            <nav class="space-y-1 px-3 text-sm">
+              <div class="px-3 py-2 rounded-lg bg-brand-600 text-white flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2 7 7 11-11"/></svg>
+                仪表盘
+              </div>
+              <div class="px-3 py-2 rounded-lg text-ink-700 hover:bg-slate-100 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7H3v10h18z M3 11h18"/></svg>
+                API Keys
+              </div>
+              <div class="px-3 py-2 rounded-lg text-ink-700 hover:bg-slate-100 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                充值 &amp; 账单
+              </div>
+              <div class="px-3 py-2 rounded-lg text-ink-700 hover:bg-slate-100 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 16V9M12 16V5M17 16v-3"/></svg>
+                用量分析
+              </div>
+              <div class="px-3 py-2 rounded-lg text-ink-700 hover:bg-slate-100 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                调用明细
+              </div>
+              <div class="px-3 py-2 rounded-lg text-ink-700 hover:bg-slate-100 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                设置
+              </div>
+            </nav>
+          </aside>
+
+          <!-- main -->
+          <div class="flex-1 p-6 bg-white">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <div class="text-xs text-ink-500">欢迎回来</div>
+                <div class="text-xl font-semibold">liwei@example.com</div>
+              </div>
+              <div class="flex gap-2">
+                <button class="px-3 py-2 text-sm rounded-lg border border-ink-200 hover:border-brand-500 hover:text-brand-600">查看文档</button>
+                <button class="px-3 py-2 text-sm rounded-lg bg-brand-600 text-white hover:bg-brand-700">充值</button>
+              </div>
+            </div>
+
+            <!-- Top stats -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+              <div class="rounded-xl border border-ink-200 p-4 bg-gradient-to-br from-brand-50 to-white">
+                <div class="text-xs text-ink-500">账户余额</div>
+                <div class="text-2xl font-bold mt-1">¥ 236.84</div>
+                <div class="text-[11px] text-ink-500 mt-1">冻结：¥0.42</div>
+              </div>
+              <div class="rounded-xl border border-ink-200 p-4">
+                <div class="text-xs text-ink-500">今日消费</div>
+                <div class="text-2xl font-bold mt-1">¥ 18.67</div>
+                <div class="text-[11px] text-emerald-600 mt-1">↓ 比昨日低 12%</div>
+              </div>
+              <div class="rounded-xl border border-ink-200 p-4">
+                <div class="text-xs text-ink-500">今日调用</div>
+                <div class="text-2xl font-bold mt-1">4,218</div>
+                <div class="text-[11px] text-ink-500 mt-1">成功率 99.76%</div>
+              </div>
+              <div class="rounded-xl border border-ink-200 p-4">
+                <div class="text-xs text-ink-500">平均首 Token 延迟</div>
+                <div class="text-2xl font-bold mt-1">342<span class="text-sm text-ink-500 font-normal">ms</span></div>
+                <div class="text-[11px] text-ink-500 mt-1">P99: 980ms</div>
+              </div>
+            </div>
+
+            <!-- chart mock + keys -->
+            <div class="grid grid-cols-3 gap-4">
+              <div class="col-span-2 rounded-xl border border-ink-200 p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="font-semibold">近 7 天消费趋势</div>
+                  <div class="text-xs text-ink-500 flex items-center gap-3">
+                    <span class="flex items-center gap-1"><span class="dot bg-brand-500"></span>Chat</span>
+                    <span class="flex items-center gap-1"><span class="dot bg-purple-500"></span>Embedding</span>
+                    <span class="flex items-center gap-1"><span class="dot bg-emerald-500"></span>Tools</span>
+                  </div>
+                </div>
+                <!-- fake bar chart -->
+                <div class="grid grid-cols-7 gap-2 h-44 items-end">
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:40%"></div><div class="w-6 bg-purple-500" style="height:10%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:6%"></div><span class="text-[10px] text-ink-500">4/16</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:55%"></div><div class="w-6 bg-purple-500" style="height:14%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:8%"></div><span class="text-[10px] text-ink-500">4/17</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:48%"></div><div class="w-6 bg-purple-500" style="height:11%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:5%"></div><span class="text-[10px] text-ink-500">4/18</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:70%"></div><div class="w-6 bg-purple-500" style="height:20%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:10%"></div><span class="text-[10px] text-ink-500">4/19</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:62%"></div><div class="w-6 bg-purple-500" style="height:18%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:9%"></div><span class="text-[10px] text-ink-500">4/20</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:82%"></div><div class="w-6 bg-purple-500" style="height:24%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:12%"></div><span class="text-[10px] text-ink-500">4/21</span></div>
+                  <div class="flex flex-col items-center gap-1"><div class="w-6 bg-brand-500 rounded-t" style="height:50%"></div><div class="w-6 bg-purple-500" style="height:15%"></div><div class="w-6 bg-emerald-500 rounded-b" style="height:8%"></div><span class="text-[10px] font-semibold text-brand-600">今日</span></div>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-ink-200 p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="font-semibold">API Keys</div>
+                  <button class="text-xs text-brand-600 hover:underline">+ 新建</button>
+                </div>
+                <div class="space-y-3">
+                  <div class="p-3 rounded-lg bg-slate-50 border border-ink-200">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-medium">生产环境</span>
+                      <span class="badge bg-emerald-50 text-emerald-700">active</span>
+                    </div>
+                    <div class="mono text-[11px] text-ink-500 mt-1">sk-llmh-1a2b****f8e9</div>
+                    <div class="bar mt-2"><span style="width:62%"></span></div>
+                    <div class="text-[10px] text-ink-500 mt-1">月用量 ¥62 / ¥100 上限</div>
+                  </div>
+                  <div class="p-3 rounded-lg bg-slate-50 border border-ink-200">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-medium">开发测试</span>
+                      <span class="badge bg-emerald-50 text-emerald-700">active</span>
+                    </div>
+                    <div class="mono text-[11px] text-ink-500 mt-1">sk-llmh-9f8e****abcd</div>
+                    <div class="bar mt-2"><span style="width:15%"></span></div>
+                    <div class="text-[10px] text-ink-500 mt-1">月用量 ¥3 / ¥20 上限</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- recent calls -->
+            <div class="mt-6 rounded-xl border border-ink-200 overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-3 border-b border-ink-200">
+                <div class="font-semibold">最近调用</div>
+                <button class="text-xs text-brand-600 hover:underline">查看全部</button>
+              </div>
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-500 text-xs">
+                  <tr>
+                    <th class="text-left px-5 py-2 font-medium">时间</th>
+                    <th class="text-left px-5 py-2 font-medium">模型</th>
+                    <th class="text-left px-5 py-2 font-medium">上游</th>
+                    <th class="text-right px-5 py-2 font-medium">Token</th>
+                    <th class="text-right px-5 py-2 font-medium">费用</th>
+                    <th class="text-right px-5 py-2 font-medium">延迟</th>
+                    <th class="text-right px-5 py-2 font-medium pr-6">状态</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-ink-200">
+                  <tr><td class="px-5 py-2 mono text-xs">16:42:11</td><td class="px-5 py-2">gpt-4o-class</td><td class="px-5 py-2 text-ink-500">火山方舟</td><td class="px-5 py-2 text-right mono">1,243 → 842</td><td class="px-5 py-2 text-right">¥ 0.062</td><td class="px-5 py-2 text-right">412ms</td><td class="px-5 py-2 text-right pr-6"><span class="badge bg-emerald-50 text-emerald-700">成功</span></td></tr>
+                  <tr><td class="px-5 py-2 mono text-xs">16:41:58</td><td class="px-5 py-2">deepseek-r1</td><td class="px-5 py-2 text-ink-500">DeepSeek</td><td class="px-5 py-2 text-right mono">532 → 1,102</td><td class="px-5 py-2 text-right">¥ 0.031</td><td class="px-5 py-2 text-right">1.2s</td><td class="px-5 py-2 text-right pr-6"><span class="badge bg-emerald-50 text-emerald-700">成功</span></td></tr>
+                  <tr><td class="px-5 py-2 mono text-xs">16:41:45</td><td class="px-5 py-2">qwen-max</td><td class="px-5 py-2 text-ink-500">阿里百炼</td><td class="px-5 py-2 text-right mono">812 → 301</td><td class="px-5 py-2 text-right">¥ 0.024</td><td class="px-5 py-2 text-right">298ms</td><td class="px-5 py-2 text-right pr-6"><span class="badge bg-emerald-50 text-emerald-700">成功</span></td></tr>
+                  <tr><td class="px-5 py-2 mono text-xs">16:41:21</td><td class="px-5 py-2">claude-4-sonnet</td><td class="px-5 py-2 text-ink-500">Anthropic</td><td class="px-5 py-2 text-right mono">1,024 → —</td><td class="px-5 py-2 text-right">¥ 0.000</td><td class="px-5 py-2 text-right">—</td><td class="px-5 py-2 text-right pr-6"><span class="badge bg-amber-50 text-amber-700">重试后成功</span></td></tr>
+                  <tr><td class="px-5 py-2 mono text-xs">16:40:55</td><td class="px-5 py-2">gpt-4o-class</td><td class="px-5 py-2 text-ink-500">火山方舟</td><td class="px-5 py-2 text-right mono">218 → 190</td><td class="px-5 py-2 text-right">¥ 0.013</td><td class="px-5 py-2 text-right">188ms</td><td class="px-5 py-2 text-right pr-6"><span class="badge bg-emerald-50 text-emerald-700">成功</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 运营后台 ========== -->
+    <div id="tab-admin" class="tab-panel">
+      <div class="rounded-2xl shadow-xl bg-white border border-ink-200 overflow-hidden">
+        <div class="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 border-b border-ink-200">
+          <span class="w-3 h-3 rounded-full bg-red-400"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400"></span>
+          <span class="ml-4 text-xs text-ink-500 mono">admin.llmhub.io/pool</span>
+          <span class="ml-auto text-[11px] text-ink-500 flex items-center gap-2"><span class="dot bg-emerald-500 live-dot"></span>实时数据</span>
+        </div>
+
+        <div class="flex">
+          <aside class="w-56 shrink-0 border-r border-ink-200 py-4 bg-slate-900 text-slate-200">
+            <div class="px-5 pb-4 text-xs uppercase tracking-wider text-slate-400">运营控制台</div>
+            <nav class="space-y-1 px-3 text-sm">
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">概览</div>
+              <div class="px-3 py-2 rounded-lg bg-brand-600 text-white">账号池</div>
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">Provider 管理</div>
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">模型 &amp; 定价</div>
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">用户管理</div>
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">对账</div>
+              <div class="px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">告警</div>
+            </nav>
+          </aside>
+
+          <div class="flex-1 p-6 bg-slate-50">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <div class="text-xs text-ink-500">账号池 · Account Pool</div>
+                <div class="text-xl font-semibold">分层账号池管理</div>
+              </div>
+              <div class="flex gap-2">
+                <button class="px-3 py-2 text-sm rounded-lg border border-ink-200 bg-white hover:border-brand-500">批量导入</button>
+                <button class="px-3 py-2 text-sm rounded-lg bg-ink-900 text-white hover:bg-ink-700">+ 录入账号</button>
+              </div>
+            </div>
+
+            <!-- Tier summary -->
+            <div class="grid grid-cols-4 gap-4 mb-5">
+              <div class="rounded-xl bg-white border border-ink-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-ink-500">T1 企业套餐</div>
+                  <span class="badge bg-emerald-50 text-emerald-700">稳定</span>
+                </div>
+                <div class="text-2xl font-bold mt-2">3<span class="text-sm text-ink-500 font-normal"> 个</span></div>
+                <div class="text-[11px] text-ink-500 mt-1">剩余额度 ¥ 82,400</div>
+                <div class="bar mt-2"><span style="width:72%"></span></div>
+              </div>
+              <div class="rounded-xl bg-white border border-ink-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-ink-500">T2 个人付费</div>
+                  <span class="badge bg-blue-50 text-blue-700">健康</span>
+                </div>
+                <div class="text-2xl font-bold mt-2">12<span class="text-sm text-ink-500 font-normal"> 个</span></div>
+                <div class="text-[11px] text-ink-500 mt-1">剩余额度 ¥ 18,300</div>
+                <div class="bar mt-2"><span style="width:48%"></span></div>
+              </div>
+              <div class="rounded-xl bg-white border border-ink-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-ink-500">T3 新号免费额度</div>
+                  <span class="badge bg-amber-50 text-amber-700">监控中</span>
+                </div>
+                <div class="text-2xl font-bold mt-2">36<span class="text-sm text-ink-500 font-normal"> 个</span></div>
+                <div class="text-[11px] text-ink-500 mt-1">剩余额度 ¥ 4,820</div>
+                <div class="bar mt-2"><span style="width:22%"></span></div>
+              </div>
+              <div class="rounded-xl bg-white border border-ink-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-ink-500">隔离 / 已归档</div>
+                  <span class="badge bg-rose-50 text-rose-700">5 quarantine</span>
+                </div>
+                <div class="text-2xl font-bold mt-2">11<span class="text-sm text-ink-500 font-normal"> 个</span></div>
+                <div class="text-[11px] text-ink-500 mt-1">本周退役 3 个</div>
+                <div class="bar mt-2"><span style="width:12%; background:linear-gradient(90deg,#f59e0b,#ef4444)"></span></div>
+              </div>
+            </div>
+
+            <!-- Account table -->
+            <div class="rounded-xl bg-white border border-ink-200 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-ink-200 text-xs">
+                <span class="text-ink-500">筛选：</span>
+                <select class="border border-ink-200 rounded px-2 py-1">
+                  <option>全部 Provider</option><option>火山方舟</option><option>DeepSeek</option>
+                </select>
+                <select class="border border-ink-200 rounded px-2 py-1">
+                  <option>全部 Tier</option><option>T1</option><option>T2</option><option>T3</option>
+                </select>
+                <select class="border border-ink-200 rounded px-2 py-1">
+                  <option>全部状态</option><option>active</option><option>cooling</option><option>quarantine</option>
+                </select>
+                <input class="border border-ink-200 rounded px-2 py-1 w-48 ml-auto" placeholder="搜索账号 ID / Tag" />
+              </div>
+
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-500 text-xs">
+                  <tr>
+                    <th class="text-left px-4 py-2 font-medium">#</th>
+                    <th class="text-left px-4 py-2 font-medium">Provider</th>
+                    <th class="text-left px-4 py-2 font-medium">Tier</th>
+                    <th class="text-left px-4 py-2 font-medium">状态</th>
+                    <th class="text-left px-4 py-2 font-medium">健康度</th>
+                    <th class="text-left px-4 py-2 font-medium">余额/额度</th>
+                    <th class="text-right px-4 py-2 font-medium">今日 QPS</th>
+                    <th class="text-right px-4 py-2 font-medium">今日调用</th>
+                    <th class="text-right px-4 py-2 font-medium">最后使用</th>
+                    <th class="px-4 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-ink-200">
+                  <tr class="rise">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-00231</td>
+                    <td class="px-4 py-3">火山方舟</td>
+                    <td class="px-4 py-3"><span class="badge bg-indigo-50 text-indigo-700">T1 企业</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-emerald-50 text-emerald-700"><span class="dot bg-emerald-500"></span>active</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:92%;background:#10b981"></span></div><span class="text-xs text-ink-500">92</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 34,200 / ¥ 50,000<div class="bar mt-1 w-28"><span style="width:68%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">14.2</td>
+                    <td class="px-4 py-3 text-right mono">8,342</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">3s 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">详情</button></td>
+                  </tr>
+                  <tr class="rise">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-00512</td>
+                    <td class="px-4 py-3">DeepSeek</td>
+                    <td class="px-4 py-3"><span class="badge bg-indigo-50 text-indigo-700">T1 企业</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-emerald-50 text-emerald-700"><span class="dot bg-emerald-500"></span>active</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:86%;background:#10b981"></span></div><span class="text-xs text-ink-500">86</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 12,800 / ¥ 20,000<div class="bar mt-1 w-28"><span style="width:64%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">7.1</td>
+                    <td class="px-4 py-3 text-right mono">3,102</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">1min 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">详情</button></td>
+                  </tr>
+                  <tr class="rise">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-01023</td>
+                    <td class="px-4 py-3">阿里百炼</td>
+                    <td class="px-4 py-3"><span class="badge bg-sky-50 text-sky-700">T2 付费</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-amber-50 text-amber-700"><span class="dot bg-amber-500"></span>cooling</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:45%;background:#f59e0b"></span></div><span class="text-xs text-ink-500">45</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 820 / ¥ 2,000<div class="bar mt-1 w-28"><span style="width:41%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">0</td>
+                    <td class="px-4 py-3 text-right mono">412</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">12min 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">详情</button></td>
+                  </tr>
+                  <tr class="rise">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-01208</td>
+                    <td class="px-4 py-3">火山方舟</td>
+                    <td class="px-4 py-3"><span class="badge bg-sky-50 text-sky-700">T2 付费</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-emerald-50 text-emerald-700"><span class="dot bg-emerald-500"></span>active</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:78%;background:#10b981"></span></div><span class="text-xs text-ink-500">78</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 124 / ¥ 500<div class="bar mt-1 w-28"><span style="width:25%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">2.8</td>
+                    <td class="px-4 py-3 text-right mono">948</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">8s 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">详情</button></td>
+                  </tr>
+                  <tr class="rise">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-01775</td>
+                    <td class="px-4 py-3">DeepSeek</td>
+                    <td class="px-4 py-3"><span class="badge bg-slate-100 text-slate-700">T3 新号</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-blue-50 text-blue-700"><span class="dot bg-blue-500"></span>warmup</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:60%;background:#3b82f6"></span></div><span class="text-xs text-ink-500">60</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 48 / ¥ 50<div class="bar mt-1 w-28"><span style="width:96%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">0.3</td>
+                    <td class="px-4 py-3 text-right mono">22</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">2min 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">详情</button></td>
+                  </tr>
+                  <tr class="rise bg-rose-50/30">
+                    <td class="px-4 py-3 mono text-xs text-ink-500">A-02114</td>
+                    <td class="px-4 py-3">火山方舟</td>
+                    <td class="px-4 py-3"><span class="badge bg-slate-100 text-slate-700">T3 新号</span></td>
+                    <td class="px-4 py-3"><span class="badge bg-rose-50 text-rose-700"><span class="dot bg-rose-500"></span>quarantine</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2"><div class="bar w-24"><span style="width:8%;background:#ef4444"></span></div><span class="text-xs text-ink-500">8</span></div>
+                    </td>
+                    <td class="px-4 py-3">¥ 32 / ¥ 50<div class="bar mt-1 w-28"><span style="width:64%"></span></div></td>
+                    <td class="px-4 py-3 text-right mono">0</td>
+                    <td class="px-4 py-3 text-right mono">5</td>
+                    <td class="px-4 py-3 text-right text-ink-500 text-xs">1h 前</td>
+                    <td class="px-4 py-3 text-right"><button class="text-xs text-brand-600 hover:underline">处理</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 调度器洞察 ========== -->
+    <div id="tab-dispatcher" class="tab-panel">
+      <div class="rounded-2xl shadow-xl bg-white border border-ink-200 overflow-hidden">
+        <div class="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 border-b border-ink-200">
+          <span class="w-3 h-3 rounded-full bg-red-400"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400"></span>
+          <span class="ml-4 text-xs text-ink-500 mono">admin.llmhub.io/scheduler</span>
+        </div>
+        <div class="p-8 bg-slate-900 text-slate-100">
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 rounded-xl bg-slate-800/60 p-5 border border-slate-700">
+              <div class="font-semibold mb-4">最近 60 秒调度流</div>
+              <div class="space-y-2 text-xs mono">
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:42:11</span><span class="badge bg-emerald-500/20 text-emerald-300">pick</span><span>user=u_1024</span><span class="text-slate-400">→</span><span>acc=A-00231</span><span class="text-slate-400">tier=T1</span><span class="text-slate-400">score=92</span></div>
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:42:10</span><span class="badge bg-emerald-500/20 text-emerald-300">pick</span><span>user=u_802</span><span class="text-slate-400">→</span><span>acc=A-01208</span><span class="text-slate-400">tier=T2</span><span class="text-slate-400">score=78</span></div>
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:42:08</span><span class="badge bg-amber-500/20 text-amber-300">cooling</span><span>acc=A-01023</span><span class="text-slate-400">reason=upstream_429</span></div>
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:42:07</span><span class="badge bg-sky-500/20 text-sky-300">retry</span><span>req=req_2f3a</span><span class="text-slate-400">A-01023 → A-01208</span></div>
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:42:05</span><span class="badge bg-emerald-500/20 text-emerald-300">pick</span><span>user=u_511</span><span class="text-slate-400">→</span><span>acc=A-00512</span><span class="text-slate-400">tier=T1</span><span class="text-slate-400">score=86</span></div>
+                <div class="flex items-center gap-3 p-2 rounded bg-slate-800/70"><span class="text-slate-400">16:41:58</span><span class="badge bg-rose-500/20 text-rose-300">quarantine</span><span>acc=A-02114</span><span class="text-slate-400">reason=consecutive_401</span></div>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-800/60 p-5 border border-slate-700">
+              <div class="font-semibold mb-4">调度策略权重</div>
+              <div class="space-y-4 text-sm">
+                <div>
+                  <div class="flex justify-between mb-1"><span class="text-slate-300">健康度 (health)</span><span class="mono text-slate-400">0.40</span></div>
+                  <div class="bar bg-slate-700"><span style="width:40%;background:#3b82f6"></span></div>
+                </div>
+                <div>
+                  <div class="flex justify-between mb-1"><span class="text-slate-300">Tier 匹配</span><span class="mono text-slate-400">0.30</span></div>
+                  <div class="bar bg-slate-700"><span style="width:30%;background:#8b5cf6"></span></div>
+                </div>
+                <div>
+                  <div class="flex justify-between mb-1"><span class="text-slate-300">临期优先</span><span class="mono text-slate-400">0.20</span></div>
+                  <div class="bar bg-slate-700"><span style="width:20%;background:#ec4899"></span></div>
+                </div>
+                <div>
+                  <div class="flex justify-between mb-1"><span class="text-slate-300">负载均衡</span><span class="mono text-slate-400">0.10</span></div>
+                  <div class="bar bg-slate-700"><span style="width:10%;background:#10b981"></span></div>
+                </div>
+              </div>
+              <div class="mt-5 pt-5 border-t border-slate-700 text-xs text-slate-400">
+                当前策略版本 <span class="mono text-slate-200">v1.2.3</span> · 已生效 3 天
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========= 定价 ========= -->
+<section id="pricing" class="py-20 bg-white">
+  <div class="max-w-5xl mx-auto px-6 text-center mb-10">
+    <div class="text-sm text-brand-600 font-medium">PRICING</div>
+    <h2 class="text-3xl md:text-4xl font-bold mt-2">按 Token 计费，无起付门槛</h2>
+    <p class="text-ink-500 mt-3">对比厂商官方套餐，LLMHub 零售价普遍便宜 10~30%</p>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-6">
+    <div class="rounded-2xl border border-ink-200 p-6">
+      <div class="text-sm text-ink-500">入门</div>
+      <div class="mt-2 text-2xl font-semibold">按量付费</div>
+      <div class="mt-4 text-4xl font-bold">¥ 0<span class="text-base text-ink-500 font-normal">/ 起</span></div>
+      <p class="text-sm text-ink-500 mt-2">新用户赠 ¥ 10 体验额度</p>
+      <ul class="mt-6 space-y-2 text-sm text-ink-700">
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 全部 24+ 模型可用</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 10 QPS</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 邮件客服</li>
+      </ul>
+      <button class="mt-6 w-full py-2.5 rounded-lg border border-ink-200 hover:border-brand-500 hover:text-brand-600">开始使用</button>
+    </div>
+
+    <div class="rounded-2xl p-6 relative gradient-border shadow-lg shadow-brand-500/10 bg-white">
+      <div class="absolute -top-3 left-6 px-2.5 py-1 rounded-full bg-brand-600 text-white text-[10px] font-semibold">推荐</div>
+      <div class="text-sm text-brand-600 font-medium">团队</div>
+      <div class="mt-2 text-2xl font-semibold">团队版</div>
+      <div class="mt-4 text-4xl font-bold">¥ 999<span class="text-base text-ink-500 font-normal">/ 月起</span></div>
+      <p class="text-sm text-ink-500 mt-2">含 ¥1200 额度 · 子账号协同</p>
+      <ul class="mt-6 space-y-2 text-sm text-ink-700">
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 50 QPS · 优先路由</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 子账号 / 预算管理</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 月度账单 + 发票</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 企业微信群支持</li>
+      </ul>
+      <button class="mt-6 w-full py-2.5 rounded-lg bg-ink-900 text-white hover:bg-ink-700">选择团队版</button>
+    </div>
+
+    <div class="rounded-2xl border border-ink-200 p-6">
+      <div class="text-sm text-ink-500">企业</div>
+      <div class="mt-2 text-2xl font-semibold">企业版</div>
+      <div class="mt-4 text-4xl font-bold">定制</div>
+      <p class="text-sm text-ink-500 mt-2">专属额度池 · SLA 合同</p>
+      <ul class="mt-6 space-y-2 text-sm text-ink-700">
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> SLA 99.95%</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 专属上游通道</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 审计日志 / SSO</li>
+        <li class="flex gap-2"><span class="text-emerald-500">✓</span> 专属技术支持</li>
+      </ul>
+      <button class="mt-6 w-full py-2.5 rounded-lg border border-ink-200 hover:border-brand-500 hover:text-brand-600">联系销售</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========= 文档 / 快速开始 ========= -->
+<section id="docs" class="py-20 bg-slate-50">
+  <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+    <div>
+      <div class="text-sm text-brand-600 font-medium">QUICK START</div>
+      <h2 class="text-3xl md:text-4xl font-bold mt-2 leading-tight">5 分钟接入，<br/>无需改业务代码</h2>
+      <p class="text-ink-500 mt-4 leading-relaxed">
+        用官方 OpenAI SDK，改一个 <span class="mono text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">base_url</span> 就能享受全部厂商。
+        切换底层模型 / 遇到故障自动切换 / 按 Token 精确计费，全部交给 LLMHub。
+      </p>
+      <ul class="mt-6 space-y-3 text-sm">
+        <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">1</span>注册并创建 API Key</li>
+        <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">2</span>充值（或使用新用户额度）</li>
+        <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">3</span>改一行代码 —— <span class="mono">base_url = https://api.llmhub.io/v1</span></li>
+        <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">4</span>开始调用</li>
+      </ul>
+    </div>
+
+    <div class="code-win p-5 shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <button class="code-tab px-3 py-1 rounded bg-slate-700 text-white text-xs" data-lang="py">Python</button>
+        <button class="code-tab px-3 py-1 rounded text-slate-300 text-xs" data-lang="js">Node.js</button>
+        <button class="code-tab px-3 py-1 rounded text-slate-300 text-xs" data-lang="curl">cURL</button>
+      </div>
+      <pre id="code-py" class="code-panel"><span style="color:#7dd3fc">from</span> openai <span style="color:#7dd3fc">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span style="color:#fca5a5">"sk-llmh-xxxxxxxxxxxx"</span>,
+    base_url=<span style="color:#fca5a5">"https://api.llmhub.io/v1"</span>,
+)
+
+resp = client.chat.completions.create(
+    model=<span style="color:#fca5a5">"gpt-4o-class"</span>,
+    messages=[
+        {<span style="color:#fca5a5">"role"</span>: <span style="color:#fca5a5">"user"</span>, <span style="color:#fca5a5">"content"</span>: <span style="color:#fca5a5">"你好 LLMHub"</span>}
+    ],
+    stream=<span style="color:#fcd34d">True</span>,
+)
+
+<span style="color:#7dd3fc">for</span> chunk <span style="color:#7dd3fc">in</span> resp:
+    <span style="color:#d8b4fe">print</span>(chunk.choices[<span style="color:#fcd34d">0</span>].delta.content <span style="color:#7dd3fc">or</span> <span style="color:#fca5a5">""</span>, end=<span style="color:#fca5a5">""</span>)</pre>
+
+      <pre id="code-js" class="code-panel" style="display:none"><span style="color:#7dd3fc">import</span> OpenAI <span style="color:#7dd3fc">from</span> <span style="color:#fca5a5">'openai'</span>;
+
+<span style="color:#7dd3fc">const</span> client = <span style="color:#7dd3fc">new</span> OpenAI({
+  apiKey: <span style="color:#fca5a5">'sk-llmh-xxxxxxxxxxxx'</span>,
+  baseURL: <span style="color:#fca5a5">'https://api.llmhub.io/v1'</span>,
+});
+
+<span style="color:#7dd3fc">const</span> stream = <span style="color:#7dd3fc">await</span> client.chat.completions.create({
+  model: <span style="color:#fca5a5">'gpt-4o-class'</span>,
+  messages: [{ role: <span style="color:#fca5a5">'user'</span>, content: <span style="color:#fca5a5">'你好 LLMHub'</span> }],
+  stream: <span style="color:#fcd34d">true</span>,
+});
+
+<span style="color:#7dd3fc">for await</span> (<span style="color:#7dd3fc">const</span> chunk <span style="color:#7dd3fc">of</span> stream) {
+  process.stdout.write(chunk.choices[<span style="color:#fcd34d">0</span>]?.delta?.content ?? <span style="color:#fca5a5">''</span>);
+}</pre>
+
+      <pre id="code-curl" class="code-panel" style="display:none">curl https://api.llmhub.io/v1/chat/completions \
+  -H <span style="color:#fca5a5">"Authorization: Bearer sk-llmh-xxxxxxxxxxxx"</span> \
+  -H <span style="color:#fca5a5">"Content-Type: application/json"</span> \
+  -d <span style="color:#fca5a5">'{
+    "model": "gpt-4o-class",
+    "messages": [{"role":"user","content":"你好 LLMHub"}],
+    "stream": true
+  }'</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========= Footer ========= -->
+<footer class="bg-ink-900 text-slate-400 py-14">
+  <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
+    <div>
+      <div class="flex items-center gap-2 text-white">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center font-bold">L</div>
+        <span class="font-semibold text-lg">LLMHub</span>
+      </div>
+      <p class="text-sm mt-3">大模型算力聚合与分销平台</p>
+    </div>
+    <div>
+      <div class="text-white text-sm font-semibold mb-3">产品</div>
+      <ul class="space-y-2 text-sm">
+        <li>平台功能</li><li>定价</li><li>路线图</li>
+      </ul>
+    </div>
+    <div>
+      <div class="text-white text-sm font-semibold mb-3">开发者</div>
+      <ul class="space-y-2 text-sm">
+        <li>API 文档</li><li>SDK</li><li>状态页</li>
+      </ul>
+    </div>
+    <div>
+      <div class="text-white text-sm font-semibold mb-3">公司</div>
+      <ul class="space-y-2 text-sm">
+        <li>关于</li><li>博客</li><li>联系我们</li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-slate-800 text-xs flex justify-between">
+    <span>© 2026 LLMHub · 预览版</span>
+    <span class="mono">v0.1 · preview</span>
+  </div>
+</footer>
+
+<script>
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Code lang
+  document.querySelectorAll('.code-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.code-tab').forEach(b => { b.classList.remove('bg-slate-700','text-white'); b.classList.add('text-slate-300'); });
+      btn.classList.add('bg-slate-700','text-white');
+      btn.classList.remove('text-slate-300');
+      document.querySelectorAll('.code-panel').forEach(p => p.style.display='none');
+      document.getElementById('code-' + btn.dataset.lang).style.display='block';
+    });
+  });
+</script>
+
+</body>
+</html>

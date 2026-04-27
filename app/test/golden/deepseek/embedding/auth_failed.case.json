@@ -1,0 +1,18 @@
+{
+  "name": "auth_failed",
+  "inputs": ["hi"],
+  "model": "deepseek-embedding",
+  "upstream": {
+    "status": 401,
+    "body": {
+      "error": {
+        "code": "InvalidAPIKey",
+        "type": "auth",
+        "message": "bad key"
+      }
+    }
+  },
+  "expect": {
+    "error_kind": "unauthorized"
+  }
+}

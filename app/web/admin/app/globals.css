@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-ink-900: #0b1220;
+  --color-ink-800: #111827;
+  --color-ink-700: #1f2937;
+  --color-ink-500: #6b7280;
+  --color-ink-200: #e5e7eb;
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: #0b1220;
+  color: #e5e7eb;
+}
+.mono {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}

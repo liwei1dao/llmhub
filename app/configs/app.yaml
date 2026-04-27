@@ -1,0 +1,22 @@
+# Base configuration shared by all services.
+# Override per-environment in app.dev.yaml / app.staging.yaml / app.prod.yaml
+# and per-service in gateway.yaml / scheduler.yaml / ...
+
+env: dev
+
+log:
+  level: info
+  format: json
+
+http:
+  read_timeout_sec: 30
+  write_timeout_sec: 120
+
+db:
+  max_open_conns: 20
+  max_idle_conns: 5
+  conn_max_life_mins: 30
+
+tracing:
+  enabled: false
+  sample_ratio: 0.1
