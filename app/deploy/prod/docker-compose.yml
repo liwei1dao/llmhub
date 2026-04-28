@@ -1,12 +1,18 @@
-# Production compose file. Same shape as the test environment but
-# without exposing internal ports — public traffic must go through the
-# reverse proxy (nginx / traefik / cloud LB) running outside this file.
+# Production compose file. 不暴露内部端口 —— 公网流量走外层反向代理
+# (nginx / traefik / cloud LB)。
 #
-# Required env on the host (typically /opt/llmhub/.env):
-#   REGISTRY_URL, IMAGE_TAG  (immutable semver, e.g. 0.1.0)
-#   POSTGRES_PASSWORD
-#   LLMHUB_ADMIN_TOKEN
-#   LLMHUB_INTERNAL_TOKEN
+# Postgres / Redis / NATS 全部使用外部已运维实例（云数据库 / 自建集群）
+# 不在此 compose 内启动；通过 .env 注入连接串即可。
+#
+# Required env on the host (typically /opt/llmhub-prod/.env):
+#   REGISTRY_URL            私有镜像仓库地址
+#   IMAGE_TAG               immutable semver, e.g. 0.1.0
+#   LLMHUB_DB_DSN           外部 PG DSN
+#   LLMHUB_REDIS_ADDR       外部 Redis host:port
+#   LLMHUB_NATS_URL         外部 NATS URL
+#   LLMHUB_ADMIN_TOKEN      admin 共享 token
+#   LLMHUB_INTERNAL_TOKEN   服务间互信 token
+#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（逗号分隔）
 #   PUBLIC_API_BASE         e.g. https://api.llmhub.io
 
 name: llmhub-prod
@@ -17,47 +23,21 @@ x-base: &base
     driver: json-file
     options: { max-size: '50m', max-file: '10' }
 
+x-go-env: &go-env
+  LLMHUB_ENV: production
+  LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+  LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+  LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+  LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+
 services:
-  postgres:
-    <<: *base
-    image: timescale/timescaledb:latest-pg16
-    environment:
-      POSTGRES_USER: llmhub
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: llmhub
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U llmhub']
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
-  redis:
-    <<: *base
-    image: redis:7-alpine
-    volumes:
-      - redisdata:/data
-
-  nats:
-    <<: *base
-    image: nats:2-alpine
-    command: ['-js', '-m', '8222']
-    volumes:
-      - natsdata:/data
-
   gateway:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-gateway:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: production
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
-      LLMHUB_REDIS_ADDR: redis:6379
-      LLMHUB_NATS_URL: nats://nats:4222
+      <<: *go-env
       LLMHUB_SCHEDULER_ADDR: http://scheduler:9001
       LLMHUB_BILLING_ADDR: http://billing:9003
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
     expose: ['8080']
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
@@ -68,21 +48,16 @@ services:
   scheduler:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-scheduler:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: production
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_HTTP_ADDR: ':9001'
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
     expose: ['9001']
 
   account:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-account:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: production
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
       LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS}
     expose: ['8081']
@@ -90,21 +65,16 @@ services:
   billing:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-billing:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: production
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_HTTP_ADDR: ':9003'
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
     expose: ['9003']
 
   worker:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-worker:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: production
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
 
   www:
     <<: *base
@@ -124,8 +94,3 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
     expose: ['3000']
-
-volumes:
-  pgdata:
-  redisdata:
-  natsdata:

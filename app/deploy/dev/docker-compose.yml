@@ -1,13 +1,19 @@
 # Dev (开发/测试) environment compose file. Synced to the dev host by
 # the dev-build-deploy workflow; the host pulls images and runs them.
 #
+# Postgres / Redis / NATS 全部使用外部已运维的实例 —— 不在此 compose
+# 内启动；通过 .env 注入连接串即可。
+#
 # Required env vars (set on the host or via .env beside this file):
-#   REGISTRY_URL        e.g. gitea.ideapsound.com
-#   
-#   IMAGE_TAG           dev-latest (default for the dev env)
-#   POSTGRES_PASSWORD   strong password
-#   LLMHUB_ADMIN_TOKEN  shared admin token
-#   LLMHUB_INTERNAL_TOKEN  shared inter-service token
+#   REGISTRY_URL            私有镜像仓库地址（如 gitea.ideapsound.com）
+#   IMAGE_TAG               镜像 tag（dev 默认 dev-latest）
+#   LLMHUB_DB_DSN           外部 PG DSN
+#   LLMHUB_REDIS_ADDR       外部 Redis host:port
+#   LLMHUB_NATS_URL         外部 NATS URL
+#   LLMHUB_ADMIN_TOKEN      admin 后台共享 token
+#   LLMHUB_INTERNAL_TOKEN   服务间互信 token
+#   PUBLIC_API_BASE         前端注入的 API 基址（默认 http://localhost:8081）
+#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（逗号分隔，可空）
 
 name: llmhub-dev
 
@@ -17,66 +23,35 @@ x-base: &base
     driver: json-file
     options: { max-size: '20m', max-file: '5' }
 
+x-go-env: &go-env
+  LLMHUB_ENV: dev
+  LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+  LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+  LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+  LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+
 services:
-  postgres:
-    <<: *base
-    image: timescale/timescaledb:latest-pg16
-    environment:
-      POSTGRES_USER: llmhub
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: llmhub
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U llmhub']
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    <<: *base
-    image: redis:7-alpine
-    volumes:
-      - redisdata:/data
-
-  nats:
-    <<: *base
-    image: nats:2-alpine
-    command: ['-js', '-m', '8222']
-    volumes:
-      - natsdata:/data
-
   gateway:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-gateway:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_started }, nats: { condition: service_started } }
     environment:
-      LLMHUB_ENV: test
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
-      LLMHUB_REDIS_ADDR: redis:6379
-      LLMHUB_NATS_URL: nats://nats:4222
+      <<: *go-env
       LLMHUB_SCHEDULER_ADDR: http://scheduler:9001
       LLMHUB_BILLING_ADDR: http://billing:9003
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
     ports: ['8080:8080']
 
   scheduler:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-scheduler:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: test
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_HTTP_ADDR: ':9001'
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
 
   account:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-account:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: test
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
       LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
     ports: ['8081:8081']
@@ -84,20 +59,15 @@ services:
   billing:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-billing:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: test
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
       LLMHUB_HTTP_ADDR: ':9003'
-      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
 
   worker:
     <<: *base
     image: ${REGISTRY_URL}/llmhub-worker:${IMAGE_TAG}
-    depends_on: { postgres: { condition: service_healthy } }
     environment:
-      LLMHUB_ENV: test
-      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      <<: *go-env
 
   www:
     <<: *base
@@ -117,8 +87,3 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8081}
     ports: ['3002:3000']
-
-volumes:
-  pgdata:
-  redisdata:
-  natsdata:

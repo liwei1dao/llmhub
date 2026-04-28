@@ -1,114 +1,160 @@
+# ============================================================
+# CI：质量门槛 — go vet / build / test / golden / proto lint / web typecheck
+#
+# 触发：push 到 main / pull_request
+# 注意：不在 dev 分支跑（dev 走 Dev Build & Deploy）
+#
+# 设计原则：完全不依赖 github.com 上的 actions —— self-hosted runner
+# 在中国网络下从 github clone 极慢，因此 checkout / setup-go /
+# golangci-lint / buf / pnpm 全部用裸命令实现。
+# ============================================================
 name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
+env:
+  GO_VERSION: '1.22.6'
+  GOLANGCI_VERSION: 'v1.61.0'
+  BUF_VERSION: '1.45.0'
+
 jobs:
   go:
     name: Go build & test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    # 不在 CI 里临时拉起 postgres/redis/nats —— 当前 *_test.go 全部
+    # 是纯逻辑单测 + golden 协议一致性，零外部依赖。如果未来加集成
+    # 测试，再按需放回 services 块。
+
     defaults:
       run:
         working-directory: app
 
-    services:
-      postgres:
-        image: timescale/timescaledb:latest-pg16
-        env:
-          POSTGRES_USER: llmhub
-          POSTGRES_PASSWORD: llmhub
-          POSTGRES_DB: llmhub
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U llmhub"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-      nats:
-        image: nats:2-alpine
-        ports:
-          - 4222:4222
-
-    env:
-      LLMHUB_DB_DSN: postgres://llmhub:llmhub@localhost:5432/llmhub?sslmode=disable
-      LLMHUB_REDIS_ADDR: localhost:6379
-      LLMHUB_NATS_URL: nats://localhost:4222
-
     steps:
-      - uses: actions/checkout@v4
+      - name: 检出代码
+        env:
+          TOKEN: ${{ github.token }}
+          REF: ${{ github.sha }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          git init .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "$REF"
+          git checkout FETCH_HEAD
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-          cache: true
-          cache-dependency-path: app/go.sum
+      - name: 安装 Go ${{ env.GO_VERSION }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          if command -v go >/dev/null && go version | grep -q "${GO_VERSION}"; then
+            echo "Go ${GO_VERSION} 已就绪"
+          else
+            curl -fsSL "https://golang.google.cn/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+          fi
+          echo "/usr/local/go/bin" >> "$GITHUB_PATH"
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/local/go/bin:$PATH"
+          go version
+          go env -w GOPROXY=https://goproxy.cn,direct
 
       - name: go vet
         run: go vet ./...
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          working-directory: app
+      - name: 安装并运行 golangci-lint
+        run: |
+          if ! command -v golangci-lint >/dev/null; then
+            curl -fsSL "https://github.com/golangci/golangci-lint/releases/download/${GOLANGCI_VERSION}/golangci-lint-${GOLANGCI_VERSION#v}-linux-amd64.tar.gz" \
+              -o /tmp/gci.tgz \
+              || curl -fsSL "https://gitea.ideapsound.com/mirrors/golangci-lint/releases/download/${GOLANGCI_VERSION}/golangci-lint-${GOLANGCI_VERSION#v}-linux-amd64.tar.gz" -o /tmp/gci.tgz
+            tar -xzf /tmp/gci.tgz -C /tmp
+            sudo install -m 0755 "/tmp/golangci-lint-${GOLANGCI_VERSION#v}-linux-amd64/golangci-lint" /usr/local/bin/golangci-lint
+          fi
+          golangci-lint run
 
       - name: build
         run: make build
 
-      - name: unit tests
+      - name: 单元测试
         run: go test ./... -race -count=1
 
-      - name: golden protocol conformance (mandatory)
+      - name: golden 协议一致性
         run: make test-golden
 
   proto:
     name: Proto lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 5
     defaults:
       run:
         working-directory: app/proto
     steps:
-      - uses: actions/checkout@v4
-      - uses: bufbuild/buf-setup-action@v1
+      - name: 检出代码
+        env:
+          TOKEN: ${{ github.token }}
+          REF: ${{ github.sha }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          git init .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "$REF"
+          git checkout FETCH_HEAD
+
+      - name: 安装 buf
+        working-directory: ${{ github.workspace }}
+        run: |
+          if ! command -v buf >/dev/null; then
+            curl -fsSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64" -o /tmp/buf
+            sudo install -m 0755 /tmp/buf /usr/local/bin/buf
+          fi
+          buf --version
+
       - run: buf lint
       - run: buf format -d
 
   web:
-    name: Web lint & typecheck
-    runs-on: ubuntu-latest
+    name: Web lint & typecheck (${{ matrix.app }})
+    runs-on: self-hosted
+    timeout-minutes: 10
     strategy:
+      fail-fast: false
       matrix:
         app: [www, console, admin]
     defaults:
       run:
         working-directory: app/web/${{ matrix.app }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: app/web/${{ matrix.app }}/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile || pnpm install
-      - run: pnpm lint --if-present
-      - run: pnpm typecheck --if-present
+      - name: 检出代码
+        env:
+          TOKEN: ${{ github.token }}
+          REF: ${{ github.sha }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          git init .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "$REF"
+          git checkout FETCH_HEAD
+
+      - name: 启用 pnpm
+        working-directory: ${{ github.workspace }}
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+          pnpm config set registry https://registry.npmmirror.com
+          node --version
+          pnpm --version
+
+      - name: install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: lint
+        run: pnpm lint --if-present
+
+      - name: typecheck
+        run: pnpm typecheck --if-present

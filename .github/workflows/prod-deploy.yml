@@ -117,15 +117,19 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "${{ vars.PROD_SSH_PORT || 22 }}" -H "${{ vars.PROD_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: 同步 prod compose 文件
+      - name: 同步 compose + .env.example 到 prod 主机
         env:
           PORT: ${{ vars.PROD_SSH_PORT || 22 }}
           USER_HOST: ${{ vars.PROD_SSH_USER }}@${{ vars.PROD_SSH_HOST }}
           DEPLOY_DIR: ${{ vars.PROD_DEPLOY_DIR }}
         run: |
           ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" "mkdir -p '$DEPLOY_DIR'"
+          # docker-compose.yml 和 .env.example 每次都覆盖。
+          # 真正的 .env（含 secret）由运维维护，CI 不触碰。
           scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
-            app/deploy/prod/docker-compose.yml "$USER_HOST:$DEPLOY_DIR/docker-compose.yml"
+            app/deploy/prod/docker-compose.yml \
+            app/deploy/prod/.env.example \
+            "$USER_HOST:$DEPLOY_DIR/"
 
       - name: 拉镜像 + 滚动重启
         env:
@@ -142,6 +146,17 @@ jobs:
             DEPLOY_DIR="$DEPLOY_DIR" VER="$VER" 'bash -s' << 'EOSSH'
           set -euo pipefail
           cd "$DEPLOY_DIR"
+          if [ ! -f .env ]; then
+            echo "❌ $DEPLOY_DIR/.env 不存在 —— 首次部署请按 .env.example 创建并填好真实值"
+            exit 1
+          fi
+          missing=$(comm -23 \
+            <(grep -E '^[A-Z_]+=' .env.example | cut -d= -f1 | sort) \
+            <(grep -E '^[A-Z_]+=' .env         | cut -d= -f1 | sort) || true)
+          if [ -n "$missing" ]; then
+            echo "⚠️  .env 缺少以下字段（来自最新 .env.example），请补齐："
+            echo "$missing"
+          fi
           export IMAGE_TAG="$VER"
           echo "$REGISTRY_PASS" | docker login "$REGISTRY_URL" -u "$REGISTRY_USER" --password-stdin
           docker compose pull
