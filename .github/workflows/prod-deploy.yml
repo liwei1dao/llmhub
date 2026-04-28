@@ -1,17 +1,35 @@
-name: prod · deploy to production
+# ============================================================
+# 正式环境：部署指定版本的镜像到 prod 主机
+#
+# 触发：手动 workflow_dispatch（输入版本号 + 二次确认）
+# 前置：该版本必须已通过 Prod Build 工作流推送到 registry
+#
+# 行为：检验镜像存在 → SCP compose → SSH docker compose pull && up -d
+#
+# 需要的 Variables：
+#   REGISTRY_URL       私有 registry 地址
+#   REGISTRY_USER      registry 用户名
+#   PROD_PUBLIC_URL    生产对外地址（仅展示）
+#
+# 需要的 Secrets：
+#   REGISTRY_PASS      registry 密码
+#   PROD_SSH_HOST      prod 主机
+#   PROD_SSH_USER      SSH 用户
+#   PROD_SSH_KEY       SSH 私钥
+#   PROD_SSH_PORT      SSH 端口（可选，默认 22）
+#   PROD_DEPLOY_DIR    主机上 docker compose 工作目录（含 .env）
+# ============================================================
+name: Prod Deploy
 
-# Production deploy is always manual: pick a previously released version
-# tag and roll it out. No build happens here — release-build.yml is the
-# only path that mints production images.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to deploy (e.g. 0.1.0). Must already exist in the registry.'
+        description: '部署版本（如 0.1.0，必须已 Prod Build 推送过）'
         required: true
         type: string
       confirm:
-        description: 'Type "DEPLOY" to confirm.'
+        description: '输入 DEPLOY 二次确认上线'
         required: true
         type: string
 
@@ -19,54 +37,78 @@ concurrency:
   group: prod-deploy
   cancel-in-progress: false
 
-env:
-  REGISTRY: ${{ vars.REGISTRY_HOST || 'gitea.ideapsound.com' }}
-  REGISTRY_NAMESPACE: ${{ vars.REGISTRY_NAMESPACE || 'liwei' }}
-
 jobs:
   guard:
-    name: Confirm intent
-    runs-on: ubuntu-latest
+    name: 校验输入
+    runs-on: self-hosted
+    timeout-minutes: 2
     steps:
-      - name: Validate confirmation token
+      - name: 校验版本号格式
+        env:
+          VER: ${{ inputs.version }}
         run: |
-          if [ "${{ inputs.confirm }}" != "DEPLOY" ]; then
-            echo "❌ confirmation token mismatch — type DEPLOY in the input"
+          if [[ ! "${VER}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version 必须形如 0.1.0，当前: ${VER}"
             exit 1
           fi
 
-  verify-images:
-    name: Verify ${{ inputs.version }} exists
-    needs: guard
-    runs-on: ubuntu-latest
-    steps:
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: 校验确认 token
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [[ "${CONFIRM}" != "DEPLOY" ]]; then
+            echo "请在 confirm 输入 DEPLOY 进行二次确认"
+            exit 1
+          fi
 
-      - name: Probe each image manifest
+  verify:
+    name: 校验镜像 ${{ inputs.version }} 存在
+    needs: guard
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: 登录 registry
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+        run: |
+          echo "${REGISTRY_PASS}" | docker login "${REGISTRY_URL}" -u "${REGISTRY_USER}" --password-stdin
+
+      - name: 探测每个镜像 manifest
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          VER: ${{ inputs.version }}
         run: |
           set -euo pipefail
           for svc in gateway scheduler account billing worker cli www console admin; do
-            ref="${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${svc}:${{ inputs.version }}"
-            echo "→ $ref"
-            docker buildx imagetools inspect "$ref" >/dev/null
+            ref="${REGISTRY_URL}/llmhub-${svc}:${VER}"
+            echo "→ ${ref}"
+            docker manifest inspect "${ref}" >/dev/null
           done
 
   deploy:
-    name: Roll out to prod host
-    needs: verify-images
-    runs-on: ubuntu-latest
+    name: 部署到 prod 主机
+    needs: verify
+    runs-on: self-hosted
+    timeout-minutes: 15
     environment:
       name: production
       url: ${{ vars.PROD_PUBLIC_URL }}
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Sync prod compose file
+    steps:
+      - name: 检出 tag ${{ inputs.version }}
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "refs/tags/${VER}:refs/tags/${VER}"
+          git checkout "${VER}"
+          echo "部署 commit: $(git rev-parse HEAD)"
+
+      - name: 同步 prod compose 文件
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -77,7 +119,7 @@ jobs:
           target: ${{ secrets.PROD_DEPLOY_DIR }}
           strip_components: 3
 
-      - name: Pull & roll out
+      - name: 拉镜像 + 滚动重启
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -87,26 +129,21 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.PROD_DEPLOY_DIR }}"
-            export REGISTRY="${{ env.REGISTRY }}"
-            export REGISTRY_NAMESPACE="${{ env.REGISTRY_NAMESPACE }}"
+            export REGISTRY_URL="${{ vars.REGISTRY_URL }}"
             export IMAGE_TAG="${{ inputs.version }}"
-            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
-
-            # Health probe before swap so we have a known-good baseline.
-            docker compose ps
-
+            echo "${{ secrets.REGISTRY_PASS }}" | docker login "$REGISTRY_URL" -u "${{ vars.REGISTRY_USER }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
-
-            # Smoke check: gateway must be reachable on its bound port.
             sleep 5
             docker compose ps
-            docker compose exec -T gateway wget -qO- http://localhost:8080/health || \
-              (echo "❌ gateway /health failed — check logs"; exit 1)
+            docker compose exec -T gateway wget -qO- http://localhost:8080/health \
+              || (echo "❌ gateway /health 失败，请查看 docker logs"; exit 1)
 
-      - name: Annotate deployment
+      - name: 部署摘要
+        if: always()
         run: |
-          echo "## 🚀 deployed llmhub ${{ inputs.version }} to production" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- registry: \`${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- triggered by: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🚀 上线 llmhub ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像: \`${{ vars.REGISTRY_URL }}/llmhub-*:${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 主机: \`${{ secrets.PROD_SSH_HOST }}:${{ secrets.PROD_SSH_PORT || 22 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 入口: ${{ vars.PROD_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 触发: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

@@ -1,117 +1,155 @@
-name: release · build production images
+# ============================================================
+# 正式环境：构建带版本号的镜像，仅构建不部署
+#
+# 触发：手动 workflow_dispatch（输入版本号）
+#
+# 镜像：${REGISTRY_URL}/llmhub-<service>:${version}
+#       同时推送 ${REGISTRY_URL}/llmhub-<service>:latest
+#       并把当前 commit 打成同名 git tag，便于部署脚本回滚时
+#       能 checkout 出对应的 web 资源
+#
+# 需要的 Variables：
+#   REGISTRY_URL       私有 registry 地址
+#   REGISTRY_USER      registry 用户名
+#
+# 需要的 Secrets：
+#   REGISTRY_PASS      registry 密码
+# ============================================================
+name: Prod Build
 
-# Triggered when a semver tag is pushed on `main` (e.g. v0.1.0).
-# Only builds & pushes immutable images — does NOT deploy.
-# Production rollout is the prod-deploy workflow, run manually.
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. 0.1.0). Leave blank to derive from tag.'
-        required: false
+        description: '镜像版本号（如 0.1.0，必须形如 X.Y.Z）'
+        required: true
         type: string
 
+concurrency:
+  group: prod-build
+  cancel-in-progress: false
+
 env:
-  REGISTRY: ${{ vars.REGISTRY_HOST || 'gitea.ideapsound.com' }}
-  REGISTRY_NAMESPACE: ${{ vars.REGISTRY_NAMESPACE || 'liwei' }}
+  IMAGE_PREFIX: llmhub
 
 jobs:
   prepare:
-    name: Resolve version
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.v.outputs.version }}
+    name: 校验 + 检出 main
+    runs-on: self-hosted
+    timeout-minutes: 5
     steps:
-      - id: v
+      - name: 校验版本号格式
+        env:
+          VER: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            tag="${GITHUB_REF#refs/tags/}"
-            echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          if [[ ! "${VER}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version 必须形如 0.1.0，当前: ${VER}"
+            exit 1
           fi
 
-  verify-branch:
-    name: Verify tag is on main
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Reject tags not reachable from main
+      - name: 检出 main
+        env:
+          TOKEN: ${{ github.token }}
         run: |
-          set -e
-          git fetch origin main:main || true
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" main; then
-            echo "❌ commit $GITHUB_SHA is not on main; production builds must come from main."
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin main
+          git checkout FETCH_HEAD
+          echo "构建 commit: $(git rev-parse HEAD)"
+
+      - name: 检查 git tag 是否已存在
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          if git ls-remote --tags "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git" \
+              | grep -q "refs/tags/${VER}$"; then
+            echo "git tag ${VER} 已存在，请换一个版本号（避免覆盖已发布版本）"
             exit 1
           fi
 
   build:
-    name: Build & push images
-    needs: [prepare, verify-branch]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    name: 构建并推送正式镜像
+    needs: prepare
+    runs-on: self-hosted
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         component:
-          - { name: gateway,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=gateway' }
-          - { name: scheduler, ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=scheduler' }
-          - { name: account,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=account' }
-          - { name: billing,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=billing' }
-          - { name: worker,    ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=worker' }
-          - { name: cli,       ctx: app,     dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=cli' }
-          - { name: www,       ctx: app/web, dockerfile: app/web/Dockerfile,    build_args: 'APP=www' }
-          - { name: console,   ctx: app/web, dockerfile: app/web/Dockerfile,    build_args: 'APP=console' }
-          - { name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile,    build_args: 'APP=admin' }
+          - { name: gateway,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=gateway' }
+          - { name: scheduler, ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=scheduler' }
+          - { name: account,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=account' }
+          - { name: billing,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=billing' }
+          - { name: worker,    ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=worker' }
+          - { name: cli,       ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=cli' }
+          - { name: www,       ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=www' }
+          - { name: console,   ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=console' }
+          - { name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=admin' }
+
     steps:
-      - uses: actions/checkout@v4
+      - name: 检出 main
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin main
+          git checkout FETCH_HEAD
 
-      - uses: docker/setup-buildx-action@v3
+      - name: 登录私有镜像仓库
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+        run: |
+          echo "${REGISTRY_PASS}" | docker login "${REGISTRY_URL}" -u "${REGISTRY_USER}" --password-stdin
 
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: 构建并推送 ${{ matrix.component.name }} (version + latest)
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          VER: ${{ inputs.version }}
+        run: |
+          IMG_BASE="${REGISTRY_URL}/${IMAGE_PREFIX}-${{ matrix.component.name }}"
+          IMG_VER="${IMG_BASE}:${VER}"
+          IMG_LATEST="${IMG_BASE}:latest"
+          docker build --network=host \
+            --build-arg ${{ matrix.component.build_arg }} \
+            -f ${{ matrix.component.dockerfile }} \
+            -t "${IMG_VER}" -t "${IMG_LATEST}" \
+            ${{ matrix.component.ctx }}
+          docker push "${IMG_VER}"
+          docker push "${IMG_LATEST}"
 
-      - name: Build & push ${{ matrix.component.name }}
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.component.ctx }}
-          file: ${{ matrix.component.dockerfile }}
-          push: true
-          build-args: ${{ matrix.component.build_args }}
-          # Production tags are immutable: <semver> is the canonical
-          # promotable artifact; `latest` and `<MAJOR.MINOR>` are
-          # convenience aliases also published.
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:${{ needs.prepare.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:latest
-          labels: |
-            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=https://gitea.ideapsound.com/liwei/llmhub
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-release
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-release,mode=max
-
-  summary:
-    name: Release summary
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
+  tag:
+    name: 打 git tag
+    needs: build
+    runs-on: self-hosted
+    timeout-minutes: 5
     steps:
-      - run: |
-          echo "## ✅ release ${{ needs.prepare.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Images pushed to \`${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-*\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Run **prod · deploy** to roll out to production." >> "$GITHUB_STEP_SUMMARY"
+      - name: 检出 main
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin main
+          git checkout FETCH_HEAD
+
+      - name: 打 tag 并推送
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          git tag "${VER}"
+          git push "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git" "${VER}"
+
+      - name: 构建摘要
+        if: always()
+        run: |
+          echo "### 正式镜像构建" >> $GITHUB_STEP_SUMMARY
+          echo "- 版本: \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像: \`${{ vars.REGISTRY_URL }}/${IMAGE_PREFIX}-*:${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- latest: \`${{ vars.REGISTRY_URL }}/${IMAGE_PREFIX}-*:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- git tag: \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 部署请运行 **Prod Deploy** workflow" >> $GITHUB_STEP_SUMMARY

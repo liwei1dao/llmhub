@@ -1,7 +1,26 @@
-name: dev · build & deploy
+# ============================================================
+# 开发环境：编译 dev 分支代码 → 推 dev-latest → 自动部署到 dev 主机
+#
+# 触发：push 到 dev 分支（自动）/ 手动 workflow_dispatch
+#
+# 镜像：${REGISTRY_URL}/llmhub-<service>:dev-latest
+#       同时推送 ${REGISTRY_URL}/llmhub-<service>:dev-${SHORT_SHA}
+#
+# 需要的 Variables：
+#   REGISTRY_URL       私有 registry 地址（如 gitea.ideapsound.com）
+#   REGISTRY_USER      registry 用户名
+#   DEV_PUBLIC_URL     dev 环境对外地址（仅展示）
+#
+# 需要的 Secrets：
+#   REGISTRY_PASS      registry 密码
+#   DEV_SSH_HOST       dev 主机 IP / 域名
+#   DEV_SSH_USER       SSH 用户
+#   DEV_SSH_KEY        SSH 私钥
+#   DEV_SSH_PORT       SSH 端口（可选，默认 22）
+#   DEV_DEPLOY_DIR     主机上 docker compose 工作目录（含 .env）
+# ============================================================
+name: Dev Build & Deploy
 
-# Triggers on every push to the `dev` branch (auto-build, auto-deploy).
-# Manual run is also supported via workflow_dispatch.
 on:
   push:
     branches: [dev]
@@ -12,66 +31,83 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY: ${{ vars.REGISTRY_HOST || 'gitea.ideapsound.com' }}
-  REGISTRY_NAMESPACE: ${{ vars.REGISTRY_NAMESPACE || 'liwei' }}
+  IMAGE_PREFIX: llmhub
   IMAGE_TAG: dev-latest
 
 jobs:
   build:
-    name: Build & push images
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    name: 构建并推送镜像
+    runs-on: self-hosted
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         component:
-          - { kind: go,  name: gateway,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=gateway' }
-          - { kind: go,  name: scheduler, ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=scheduler' }
-          - { kind: go,  name: account,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=account' }
-          - { kind: go,  name: billing,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=billing' }
-          - { kind: go,  name: worker,    ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=worker' }
-          - { kind: go,  name: cli,       ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=cli' }
-          - { kind: web, name: www,       ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=www' }
-          - { kind: web, name: console,   ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=console' }
-          - { kind: web, name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=admin' }
+          - { name: gateway,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=gateway' }
+          - { name: scheduler, ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=scheduler' }
+          - { name: account,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=account' }
+          - { name: billing,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=billing' }
+          - { name: worker,    ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=worker' }
+          - { name: cli,       ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=cli' }
+          - { name: www,       ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=www' }
+          - { name: console,   ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=console' }
+          - { name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=admin' }
+
     steps:
-      - uses: actions/checkout@v4
+      - name: 检出 dev 分支
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b dev .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin dev
+          git checkout FETCH_HEAD
+          echo "构建 commit: $(git rev-parse HEAD)"
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
-      - uses: docker/setup-buildx-action@v3
+      - name: 登录私有镜像仓库
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+        run: |
+          echo "${REGISTRY_PASS}" | docker login "${REGISTRY_URL}" -u "${REGISTRY_USER}" --password-stdin
 
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Build & push ${{ matrix.component.name }}
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.component.ctx }}
-          file: ${{ matrix.component.dockerfile }}
-          push: true
-          build-args: ${{ matrix.component.build_args }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:${{ env.IMAGE_TAG }}
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:dev-${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-dev
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-dev,mode=max
+      - name: 构建并推送 ${{ matrix.component.name }}
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+        run: |
+          IMG_BASE="${REGISTRY_URL}/${IMAGE_PREFIX}-${{ matrix.component.name }}"
+          IMG_LATEST="${IMG_BASE}:${IMAGE_TAG}"
+          IMG_SHA="${IMG_BASE}:dev-${SHORT_SHA}"
+          docker build --network=host \
+            --build-arg ${{ matrix.component.build_arg }} \
+            -f ${{ matrix.component.dockerfile }} \
+            -t "${IMG_LATEST}" -t "${IMG_SHA}" \
+            ${{ matrix.component.ctx }}
+          docker push "${IMG_LATEST}"
+          docker push "${IMG_SHA}"
 
   deploy:
-    name: Deploy to dev env
+    name: 部署到 dev 主机
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 10
     environment:
       name: dev
       url: ${{ vars.DEV_PUBLIC_URL }}
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Sync compose file to dev host
+    steps:
+      - name: 检出 dev 分支（取 compose 文件）
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b dev .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin dev
+          git checkout FETCH_HEAD
+
+      - name: 同步 compose 文件到 dev 主机
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_SSH_HOST }}
@@ -82,21 +118,27 @@ jobs:
           target: ${{ secrets.DEV_DEPLOY_DIR }}
           strip_components: 3
 
-      - name: Pull & roll out on dev host
+      - name: 拉镜像 + 滚动重启
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEV_SSH_HOST }}
           username: ${{ secrets.DEV_SSH_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           port: ${{ secrets.DEV_SSH_PORT || 22 }}
-          envs: REGISTRY,REGISTRY_NAMESPACE,IMAGE_TAG
           script: |
             set -euo pipefail
             cd "${{ secrets.DEV_DEPLOY_DIR }}"
-            export REGISTRY="${{ env.REGISTRY }}"
-            export REGISTRY_NAMESPACE="${{ env.REGISTRY_NAMESPACE }}"
-            export IMAGE_TAG="${{ env.IMAGE_TAG }}"
-            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+            export REGISTRY_URL="${{ vars.REGISTRY_URL }}"
+            export IMAGE_TAG="dev-latest"
+            echo "${{ secrets.REGISTRY_PASS }}" | docker login "$REGISTRY_URL" -u "${{ vars.REGISTRY_USER }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
+
+      - name: 部署摘要
+        if: always()
+        run: |
+          echo "### Dev 构建 & 部署" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像: \`${{ vars.REGISTRY_URL }}/${IMAGE_PREFIX}-*:${IMAGE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 主机: \`${{ secrets.DEV_SSH_HOST }}:${{ secrets.DEV_SSH_PORT || 22 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 入口: ${{ vars.DEV_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY

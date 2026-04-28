@@ -2,8 +2,8 @@
 # the dev-build-deploy workflow; the host pulls images and runs them.
 #
 # Required env vars (set on the host or via .env beside this file):
-#   REGISTRY            e.g. gitea.ideapsound.com
-#   REGISTRY_NAMESPACE  e.g. liwei
+#   REGISTRY_URL        e.g. gitea.ideapsound.com
+#   
 #   IMAGE_TAG           dev-latest (default for the dev env)
 #   POSTGRES_PASSWORD   strong password
 #   LLMHUB_ADMIN_TOKEN  shared admin token
@@ -48,7 +48,7 @@ services:
 
   gateway:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-gateway:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-gateway:${IMAGE_TAG}
     depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_started }, nats: { condition: service_started } }
     environment:
       LLMHUB_ENV: test
@@ -62,7 +62,7 @@ services:
 
   scheduler:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-scheduler:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-scheduler:${IMAGE_TAG}
     depends_on: { postgres: { condition: service_healthy } }
     environment:
       LLMHUB_ENV: test
@@ -72,7 +72,7 @@ services:
 
   account:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-account:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-account:${IMAGE_TAG}
     depends_on: { postgres: { condition: service_healthy } }
     environment:
       LLMHUB_ENV: test
@@ -83,7 +83,7 @@ services:
 
   billing:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-billing:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-billing:${IMAGE_TAG}
     depends_on: { postgres: { condition: service_healthy } }
     environment:
       LLMHUB_ENV: test
@@ -93,7 +93,7 @@ services:
 
   worker:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-worker:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-worker:${IMAGE_TAG}
     depends_on: { postgres: { condition: service_healthy } }
     environment:
       LLMHUB_ENV: test
@@ -101,19 +101,19 @@ services:
 
   www:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-www:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-www:${IMAGE_TAG}
     ports: ['3000:3000']
 
   console:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-console:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-console:${IMAGE_TAG}
     environment:
       NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8081}
     ports: ['3001:3000']
 
   admin:
     <<: *base
-    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-admin:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-admin:${IMAGE_TAG}
     environment:
       NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8081}
     ports: ['3002:3000']
