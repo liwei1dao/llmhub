@@ -1,0 +1,112 @@
+name: prod · deploy to production
+
+# Production deploy is always manual: pick a previously released version
+# tag and roll it out. No build happens here — release-build.yml is the
+# only path that mints production images.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. 0.1.0). Must already exist in the registry.'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "DEPLOY" to confirm.'
+        required: true
+        type: string
+
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ${{ vars.REGISTRY_HOST || 'gitea.ideapsound.com' }}
+  REGISTRY_NAMESPACE: ${{ vars.REGISTRY_NAMESPACE || 'liwei' }}
+
+jobs:
+  guard:
+    name: Confirm intent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation token
+        run: |
+          if [ "${{ inputs.confirm }}" != "DEPLOY" ]; then
+            echo "❌ confirmation token mismatch — type DEPLOY in the input"
+            exit 1
+          fi
+
+  verify-images:
+    name: Verify ${{ inputs.version }} exists
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Probe each image manifest
+        run: |
+          set -euo pipefail
+          for svc in gateway scheduler account billing worker cli www console admin; do
+            ref="${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${svc}:${{ inputs.version }}"
+            echo "→ $ref"
+            docker buildx imagetools inspect "$ref" >/dev/null
+          done
+
+  deploy:
+    name: Roll out to prod host
+    needs: verify-images
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PROD_PUBLIC_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync prod compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          source: app/deploy/prod/docker-compose.yml
+          target: ${{ secrets.PROD_DEPLOY_DIR }}
+          strip_components: 3
+
+      - name: Pull & roll out
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.PROD_DEPLOY_DIR }}"
+            export REGISTRY="${{ env.REGISTRY }}"
+            export REGISTRY_NAMESPACE="${{ env.REGISTRY_NAMESPACE }}"
+            export IMAGE_TAG="${{ inputs.version }}"
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            # Health probe before swap so we have a known-good baseline.
+            docker compose ps
+
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            # Smoke check: gateway must be reachable on its bound port.
+            sleep 5
+            docker compose ps
+            docker compose exec -T gateway wget -qO- http://localhost:8080/health || \
+              (echo "❌ gateway /health failed — check logs"; exit 1)
+
+      - name: Annotate deployment
+        run: |
+          echo "## 🚀 deployed llmhub ${{ inputs.version }} to production" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- registry: \`${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- triggered by: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

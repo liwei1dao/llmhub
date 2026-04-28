@@ -1,0 +1,102 @@
+name: dev · build & deploy
+
+# Triggers on every push to the `dev` branch (auto-build, auto-deploy).
+# Manual run is also supported via workflow_dispatch.
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: dev-deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ${{ vars.REGISTRY_HOST || 'gitea.ideapsound.com' }}
+  REGISTRY_NAMESPACE: ${{ vars.REGISTRY_NAMESPACE || 'liwei' }}
+  IMAGE_TAG: dev-latest
+
+jobs:
+  build:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - { kind: go,  name: gateway,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=gateway' }
+          - { kind: go,  name: scheduler, ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=scheduler' }
+          - { kind: go,  name: account,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=account' }
+          - { kind: go,  name: billing,   ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=billing' }
+          - { kind: go,  name: worker,    ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=worker' }
+          - { kind: go,  name: cli,       ctx: app, dockerfile: app/deploy/Dockerfile, build_args: 'SERVICE=cli' }
+          - { kind: web, name: www,       ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=www' }
+          - { kind: web, name: console,   ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=console' }
+          - { kind: web, name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile, build_args: 'APP=admin' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build & push ${{ matrix.component.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.component.ctx }}
+          file: ${{ matrix.component.dockerfile }}
+          push: true
+          build-args: ${{ matrix.component.build_args }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:dev-${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-dev
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/llmhub-${{ matrix.component.name }}:cache-dev,mode=max
+
+  deploy:
+    name: Deploy to dev env
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ vars.DEV_PUBLIC_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync compose file to dev host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_SSH_PORT || 22 }}
+          source: app/deploy/dev/docker-compose.yml
+          target: ${{ secrets.DEV_DEPLOY_DIR }}
+          strip_components: 3
+
+      - name: Pull & roll out on dev host
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_SSH_PORT || 22 }}
+          envs: REGISTRY,REGISTRY_NAMESPACE,IMAGE_TAG
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEV_DEPLOY_DIR }}"
+            export REGISTRY="${{ env.REGISTRY }}"
+            export REGISTRY_NAMESPACE="${{ env.REGISTRY_NAMESPACE }}"
+            export IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f

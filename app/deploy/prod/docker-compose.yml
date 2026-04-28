@@ -1,0 +1,131 @@
+# Production compose file. Same shape as the test environment but
+# without exposing internal ports — public traffic must go through the
+# reverse proxy (nginx / traefik / cloud LB) running outside this file.
+#
+# Required env on the host (typically /opt/llmhub/.env):
+#   REGISTRY, REGISTRY_NAMESPACE, IMAGE_TAG  (immutable semver, e.g. 0.1.0)
+#   POSTGRES_PASSWORD
+#   LLMHUB_ADMIN_TOKEN
+#   LLMHUB_INTERNAL_TOKEN
+#   PUBLIC_API_BASE         e.g. https://api.llmhub.io
+
+name: llmhub-prod
+
+x-base: &base
+  restart: always
+  logging:
+    driver: json-file
+    options: { max-size: '50m', max-file: '10' }
+
+services:
+  postgres:
+    <<: *base
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: llmhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: llmhub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U llmhub']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    <<: *base
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+
+  nats:
+    <<: *base
+    image: nats:2-alpine
+    command: ['-js', '-m', '8222']
+    volumes:
+      - natsdata:/data
+
+  gateway:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-gateway:${IMAGE_TAG}
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      LLMHUB_REDIS_ADDR: redis:6379
+      LLMHUB_NATS_URL: nats://nats:4222
+      LLMHUB_SCHEDULER_ADDR: http://scheduler:9001
+      LLMHUB_BILLING_ADDR: http://billing:9003
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+    expose: ['8080']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+
+  scheduler:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-scheduler:${IMAGE_TAG}
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      LLMHUB_HTTP_ADDR: ':9001'
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+    expose: ['9001']
+
+  account:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-account:${IMAGE_TAG}
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS}
+    expose: ['8081']
+
+  billing:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-billing:${IMAGE_TAG}
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+      LLMHUB_HTTP_ADDR: ':9003'
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+    expose: ['9003']
+
+  worker:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-worker:${IMAGE_TAG}
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: postgres://llmhub:${POSTGRES_PASSWORD}@postgres:5432/llmhub?sslmode=disable
+
+  www:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-www:${IMAGE_TAG}
+    expose: ['3000']
+
+  console:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-console:${IMAGE_TAG}
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
+    expose: ['3000']
+
+  admin:
+    <<: *base
+    image: ${REGISTRY}/${REGISTRY_NAMESPACE}/llmhub-admin:${IMAGE_TAG}
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
+    expose: ['3000']
+
+volumes:
+  pgdata:
+  redisdata:
+  natsdata:
