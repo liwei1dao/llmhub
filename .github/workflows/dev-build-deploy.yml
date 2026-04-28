@@ -6,18 +6,18 @@
 # 镜像：${REGISTRY_URL}/llmhub-<service>:dev-latest
 #       同时推送 ${REGISTRY_URL}/llmhub-<service>:dev-${SHORT_SHA}
 #
-# 需要的 Variables：
+# 需要的 Variables（用户/组织级即可）：
 #   REGISTRY_URL       私有 registry 地址（如 gitea.ideapsound.com）
 #   REGISTRY_USER      registry 用户名
 #   DEV_PUBLIC_URL     dev 环境对外地址（仅展示）
+#   DEV_SSH_HOST       dev 主机 IP / 域名
+#   DEV_SSH_USER       SSH 用户
+#   DEV_SSH_PORT       SSH 端口（可选，默认 22；省略即用 22）
+#   DEV_DEPLOY_DIR     主机上 docker compose 工作目录（含 .env）
 #
 # 需要的 Secrets：
 #   REGISTRY_PASS      registry 密码
-#   DEV_SSH_HOST       dev 主机 IP / 域名
-#   DEV_SSH_USER       SSH 用户
-#   DEV_SSH_KEY        SSH 私钥
-#   DEV_SSH_PORT       SSH 端口（可选，默认 22）
-#   DEV_DEPLOY_DIR     主机上 docker compose 工作目录（含 .env）
+#   DEV_SSH_KEY        dev 主机 SSH 私钥（PEM 整段）
 # ============================================================
 name: Dev Build & Deploy
 
@@ -107,33 +107,45 @@ jobs:
           git fetch --depth 1 origin dev
           git checkout FETCH_HEAD
 
+      - name: 准备 SSH 密钥
+        env:
+          KEY: ${{ secrets.DEV_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ vars.DEV_SSH_PORT || 22 }}" -H "${{ vars.DEV_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
       - name: 同步 compose 文件到 dev 主机
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEV_SSH_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          key: ${{ secrets.DEV_SSH_KEY }}
-          port: ${{ secrets.DEV_SSH_PORT || 22 }}
-          source: app/deploy/dev/docker-compose.yml
-          target: ${{ secrets.DEV_DEPLOY_DIR }}
-          strip_components: 3
+        env:
+          PORT: ${{ vars.DEV_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.DEV_SSH_USER }}@${{ vars.DEV_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.DEV_DEPLOY_DIR }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" "mkdir -p '$DEPLOY_DIR'"
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            app/deploy/dev/docker-compose.yml "$USER_HOST:$DEPLOY_DIR/docker-compose.yml"
 
       - name: 拉镜像 + 滚动重启
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEV_SSH_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          key: ${{ secrets.DEV_SSH_KEY }}
-          port: ${{ secrets.DEV_SSH_PORT || 22 }}
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.DEV_DEPLOY_DIR }}"
-            export REGISTRY_URL="${{ vars.REGISTRY_URL }}"
-            export IMAGE_TAG="dev-latest"
-            echo "${{ secrets.REGISTRY_PASS }}" | docker login "$REGISTRY_URL" -u "${{ vars.REGISTRY_USER }}" --password-stdin
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+        env:
+          PORT: ${{ vars.DEV_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.DEV_SSH_USER }}@${{ vars.DEV_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.DEV_DEPLOY_DIR }}
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" \
+            REGISTRY_URL="$REGISTRY_URL" REGISTRY_USER="$REGISTRY_USER" REGISTRY_PASS="$REGISTRY_PASS" \
+            DEPLOY_DIR="$DEPLOY_DIR" 'bash -s' << 'EOSSH'
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG=dev-latest
+          echo "$REGISTRY_PASS" | docker login "$REGISTRY_URL" -u "$REGISTRY_USER" --password-stdin
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          EOSSH
 
       - name: 部署摘要
         if: always()

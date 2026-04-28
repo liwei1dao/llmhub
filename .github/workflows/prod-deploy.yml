@@ -6,18 +6,18 @@
 #
 # 行为：检验镜像存在 → SCP compose → SSH docker compose pull && up -d
 #
-# 需要的 Variables：
+# 需要的 Variables（用户/组织级即可）：
 #   REGISTRY_URL       私有 registry 地址
 #   REGISTRY_USER      registry 用户名
 #   PROD_PUBLIC_URL    生产对外地址（仅展示）
+#   PROD_SSH_HOST      prod 主机
+#   PROD_SSH_USER      SSH 用户
+#   PROD_SSH_PORT      SSH 端口（可选，默认 22）
+#   PROD_DEPLOY_DIR    主机上 docker compose 工作目录（含 .env）
 #
 # 需要的 Secrets：
 #   REGISTRY_PASS      registry 密码
-#   PROD_SSH_HOST      prod 主机
-#   PROD_SSH_USER      SSH 用户
-#   PROD_SSH_KEY       SSH 私钥
-#   PROD_SSH_PORT      SSH 端口（可选，默认 22）
-#   PROD_DEPLOY_DIR    主机上 docker compose 工作目录（含 .env）
+#   PROD_SSH_KEY       prod 主机 SSH 私钥（PEM 整段）
 # ============================================================
 name: Prod Deploy
 
@@ -108,36 +108,49 @@ jobs:
           git checkout "${VER}"
           echo "部署 commit: $(git rev-parse HEAD)"
 
+      - name: 准备 SSH 密钥
+        env:
+          KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ vars.PROD_SSH_PORT || 22 }}" -H "${{ vars.PROD_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
       - name: 同步 prod compose 文件
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          source: app/deploy/prod/docker-compose.yml
-          target: ${{ secrets.PROD_DEPLOY_DIR }}
-          strip_components: 3
+        env:
+          PORT: ${{ vars.PROD_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.PROD_SSH_USER }}@${{ vars.PROD_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.PROD_DEPLOY_DIR }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" "mkdir -p '$DEPLOY_DIR'"
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            app/deploy/prod/docker-compose.yml "$USER_HOST:$DEPLOY_DIR/docker-compose.yml"
 
       - name: 拉镜像 + 滚动重启
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.PROD_DEPLOY_DIR }}"
-            export REGISTRY_URL="${{ vars.REGISTRY_URL }}"
-            export IMAGE_TAG="${{ inputs.version }}"
-            echo "${{ secrets.REGISTRY_PASS }}" | docker login "$REGISTRY_URL" -u "${{ vars.REGISTRY_USER }}" --password-stdin
-            docker compose pull
-            docker compose up -d --remove-orphans
-            sleep 5
-            docker compose ps
-            docker compose exec -T gateway wget -qO- http://localhost:8080/health \
-              || (echo "❌ gateway /health 失败，请查看 docker logs"; exit 1)
+        env:
+          PORT: ${{ vars.PROD_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.PROD_SSH_USER }}@${{ vars.PROD_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.PROD_DEPLOY_DIR }}
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+          VER: ${{ inputs.version }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" \
+            REGISTRY_URL="$REGISTRY_URL" REGISTRY_USER="$REGISTRY_USER" REGISTRY_PASS="$REGISTRY_PASS" \
+            DEPLOY_DIR="$DEPLOY_DIR" VER="$VER" 'bash -s' << 'EOSSH'
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG="$VER"
+          echo "$REGISTRY_PASS" | docker login "$REGISTRY_URL" -u "$REGISTRY_USER" --password-stdin
+          docker compose pull
+          docker compose up -d --remove-orphans
+          sleep 5
+          docker compose ps
+          docker compose exec -T gateway wget -qO- http://localhost:8080/health \
+            || (echo "❌ gateway /health 失败，请查看 docker logs"; exit 1)
+          EOSSH
 
       - name: 部署摘要
         if: always()
