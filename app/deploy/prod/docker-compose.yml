@@ -1,8 +1,8 @@
 # Production compose file. 不暴露内部端口 —— 公网流量走外层反向代理
 # (nginx / traefik / cloud LB)。
 #
-# Postgres / Redis / NATS 全部使用外部已运维实例（云数据库 / 自建集群）
-# 不在此 compose 内启动；通过 .env 注入连接串即可。
+# 单二进制 llmhub-api + 单 Next.js llmhub-web。
+# Postgres / Redis / NATS 全部使用外部已运维实例。
 #
 # Required env on the host (typically /opt/llmhub-prod/.env):
 #   REGISTRY_URL            私有镜像仓库地址
@@ -12,7 +12,7 @@
 #   LLMHUB_NATS_URL         外部 NATS URL
 #   LLMHUB_ADMIN_TOKEN      admin 共享 token
 #   LLMHUB_INTERNAL_TOKEN   服务间互信 token
-#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（逗号分隔）
+#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（同源部署可留空）
 #   PUBLIC_API_BASE         e.g. https://api.llmhub.io
 
 name: llmhub-prod
@@ -23,21 +23,18 @@ x-base: &base
     driver: json-file
     options: { max-size: '50m', max-file: '10' }
 
-x-go-env: &go-env
-  LLMHUB_ENV: production
-  LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
-  LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
-  LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
-  LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
-
 services:
-  gateway:
+  api:
     <<: *base
-    image: ${REGISTRY_URL}/llmhub-gateway:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-api:${IMAGE_TAG}
     environment:
-      <<: *go-env
-      LLMHUB_SCHEDULER_ADDR: http://scheduler:9001
-      LLMHUB_BILLING_ADDR: http://billing:9003
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
     expose: ['8080']
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
@@ -45,52 +42,9 @@ services:
       timeout: 5s
       retries: 4
 
-  scheduler:
+  web:
     <<: *base
-    image: ${REGISTRY_URL}/llmhub-scheduler:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-      LLMHUB_HTTP_ADDR: ':9001'
-    expose: ['9001']
-
-  account:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-account:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
-      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS}
-    expose: ['8081']
-
-  billing:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-billing:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-      LLMHUB_HTTP_ADDR: ':9003'
-    expose: ['9003']
-
-  worker:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-worker:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-
-  www:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-www:${IMAGE_TAG}
-    expose: ['3000']
-
-  console:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-console:${IMAGE_TAG}
-    environment:
-      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
-    expose: ['3000']
-
-  admin:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-admin:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-web:${IMAGE_TAG}
     environment:
       NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
     expose: ['3000']

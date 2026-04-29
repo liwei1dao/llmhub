@@ -1,8 +1,7 @@
-# Dev (开发/测试) environment compose file. Synced to the dev host by
-# the dev-build-deploy workflow; the host pulls images and runs them.
+# Dev (开发/测试) environment compose file.
 #
-# Postgres / Redis / NATS 全部使用外部已运维的实例 —— 不在此 compose
-# 内启动；通过 .env 注入连接串即可。
+# 单二进制 llmhub-api + 单 Next.js llmhub-web。
+# Postgres / Redis / NATS 全部使用外部已运维的实例。
 #
 # Required env vars (set on the host or via .env beside this file):
 #   REGISTRY_URL            私有镜像仓库地址（如 gitea.ideapsound.com）
@@ -11,9 +10,9 @@
 #   LLMHUB_REDIS_ADDR       外部 Redis host:port
 #   LLMHUB_NATS_URL         外部 NATS URL
 #   LLMHUB_ADMIN_TOKEN      admin 后台共享 token
-#   LLMHUB_INTERNAL_TOKEN   服务间互信 token
-#   PUBLIC_API_BASE         前端注入的 API 基址（默认 http://localhost:8081）
-#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（逗号分隔，可空）
+#   LLMHUB_INTERNAL_TOKEN   服务间互信 token（保留供未来扩展）
+#   LLMHUB_WEB_ORIGINS      允许的 web 跨域来源（同源部署可留空）
+#   PUBLIC_API_BASE         前端注入的 API 基址（默认 http://localhost:8080）
 
 name: llmhub-dev
 
@@ -23,67 +22,23 @@ x-base: &base
     driver: json-file
     options: { max-size: '20m', max-file: '5' }
 
-x-go-env: &go-env
-  LLMHUB_ENV: dev
-  LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
-  LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
-  LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
-  LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
-
 services:
-  gateway:
+  api:
     <<: *base
-    image: ${REGISTRY_URL}/llmhub-gateway:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-api:${IMAGE_TAG}
     environment:
-      <<: *go-env
-      LLMHUB_SCHEDULER_ADDR: http://scheduler:9001
-      LLMHUB_BILLING_ADDR: http://billing:9003
+      LLMHUB_ENV: dev
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
     ports: ['8080:8080']
 
-  scheduler:
+  web:
     <<: *base
-    image: ${REGISTRY_URL}/llmhub-scheduler:${IMAGE_TAG}
+    image: ${REGISTRY_URL}/llmhub-web:${IMAGE_TAG}
     environment:
-      <<: *go-env
-      LLMHUB_HTTP_ADDR: ':9001'
-
-  account:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-account:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
-      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
-    ports: ['8081:8081']
-
-  billing:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-billing:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-      LLMHUB_HTTP_ADDR: ':9003'
-
-  worker:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-worker:${IMAGE_TAG}
-    environment:
-      <<: *go-env
-
-  www:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-www:${IMAGE_TAG}
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8080}
     ports: ['3000:3000']
-
-  console:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-console:${IMAGE_TAG}
-    environment:
-      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8081}
-    ports: ['3001:3000']
-
-  admin:
-    <<: *base
-    image: ${REGISTRY_URL}/llmhub-admin:${IMAGE_TAG}
-    environment:
-      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8081}
-    ports: ['3002:3000']

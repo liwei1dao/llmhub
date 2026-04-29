@@ -3,7 +3,6 @@ SHELL := /usr/bin/env bash
 # -------- Configuration --------
 GO            ?= go
 GOFLAGS       ?=
-SERVICES      := gateway scheduler account billing worker cli
 BIN_DIR       := bin
 
 DEV_COMPOSE   := deploy/docker-compose.yml
@@ -18,18 +17,19 @@ help:
 	@echo "  migrate-up / migrate-down  Run goose migrations"
 	@echo "  migrate-new NAME=x   Create a new migration skeleton"
 	@echo ""
-	@echo "  build                Build all service binaries to ./bin"
-	@echo "  run-<svc>            Run a single service (e.g. make run-gateway)"
+	@echo "  build                Build the llmhub binary to ./bin"
+	@echo "  run                  Run the llmhub server (port 8080)"
 	@echo "  lint                 golangci-lint run"
 	@echo "  test                 Run unit tests"
 	@echo "  test-golden          Run provider protocol conformance tests"
-	@echo "  sqlc-check           Verify sqlc-generated code matches queries"
-	@echo "  proto                Generate gRPC + protobuf code via buf"
-	@echo "  proto-check          Verify generated proto code is in sync"
+	@echo "  proto / proto-check  Generate / verify gRPC + protobuf code via buf"
 	@echo ""
-	@echo "  web-dev              Run all Next.js apps in dev mode"
+	@echo "  web-install          pnpm install (single web/ project)"
+	@echo "  web-dev              next dev (port 3000)"
+	@echo "  web-build            next build"
+	@echo "  web-typecheck        tsc --noEmit"
 	@echo ""
-	@echo "  docker               Build all service docker images"
+	@echo "  docker-api / docker-web   Build images"
 
 # -------- Local dev environment --------
 .PHONY: dev-up dev-down dev-logs
@@ -58,16 +58,13 @@ migrate-new:
 	goose -dir migrations create $(NAME) sql
 
 # -------- Go build / run --------
-.PHONY: build
-build: $(addprefix build-,$(SERVICES))
-
-build-%:
+.PHONY: build run
+build:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build $(GOFLAGS) -o $(BIN_DIR)/$* ./cmd/$*
+	$(GO) build $(GOFLAGS) -o $(BIN_DIR)/llmhub ./cmd/llmhub
 
-.PHONY: $(addprefix run-,$(SERVICES))
-$(addprefix run-,$(SERVICES)):
-	$(GO) run ./cmd/$(subst run-,,$@)
+run:
+	$(GO) run ./cmd/llmhub
 
 # -------- Quality gates --------
 .PHONY: lint test test-golden sqlc-check
@@ -93,31 +90,23 @@ proto-check:
 	cd proto && buf lint && buf format -d
 
 # -------- Frontend --------
-.PHONY: web-install web-dev web-build web-www web-console web-admin web-typecheck
+.PHONY: web-install web-dev web-build web-typecheck
 web-install:
 	cd web && pnpm install
 
 web-dev:
-	cd web && pnpm -r --parallel dev
-
-web-www:
-	cd web/www && pnpm dev
-
-web-console:
-	cd web/console && pnpm dev
-
-web-admin:
-	cd web/admin && pnpm dev
+	cd web && pnpm dev
 
 web-build:
-	cd web && pnpm -r build
+	cd web && pnpm build
 
 web-typecheck:
-	cd web && pnpm -r typecheck
+	cd web && pnpm typecheck
 
 # -------- Docker --------
-.PHONY: docker $(addprefix docker-,$(SERVICES))
-docker: $(addprefix docker-,$(SERVICES))
+.PHONY: docker-api docker-web
+docker-api:
+	docker build -t llmhub-api:dev -f deploy/Dockerfile .
 
-docker-%:
-	docker build -t llmhub/$*:dev -f deploy/Dockerfile --build-arg SERVICE=$* .
+docker-web:
+	docker build -t llmhub-web:dev -f web/Dockerfile web

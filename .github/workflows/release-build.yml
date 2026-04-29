@@ -77,15 +77,8 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - { name: gateway,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=gateway' }
-          - { name: scheduler, ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=scheduler' }
-          - { name: account,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=account' }
-          - { name: billing,   ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=billing' }
-          - { name: worker,    ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=worker' }
-          - { name: cli,       ctx: app,     dockerfile: app/deploy/Dockerfile, build_arg: 'SERVICE=cli' }
-          - { name: www,       ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=www' }
-          - { name: console,   ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=console' }
-          - { name: admin,     ctx: app/web, dockerfile: app/web/Dockerfile,    build_arg: 'APP=admin' }
+          - { name: api, ctx: app,     dockerfile: app/deploy/Dockerfile }
+          - { name: web, ctx: app/web, dockerfile: app/web/Dockerfile }
 
     steps:
       - name: 检出 main
@@ -114,7 +107,6 @@ jobs:
           IMG_VER="${IMG_BASE}:${VER}"
           IMG_LATEST="${IMG_BASE}:latest"
           docker build --network=host \
-            --build-arg ${{ matrix.component.build_arg }} \
             -f ${{ matrix.component.dockerfile }} \
             -t "${IMG_VER}" -t "${IMG_LATEST}" \
             ${{ matrix.component.ctx }}

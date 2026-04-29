@@ -119,16 +119,12 @@ jobs:
       - run: buf format -d
 
   web:
-    name: Web lint & typecheck (${{ matrix.app }})
+    name: Web lint & typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [www, console, admin]
     defaults:
       run:
-        working-directory: app/web/${{ matrix.app }}
+        working-directory: app/web
     steps:
       - name: 检出代码
         env:
