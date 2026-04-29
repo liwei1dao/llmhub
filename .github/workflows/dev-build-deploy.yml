@@ -37,7 +37,7 @@ env:
 jobs:
   build:
     name: 构建并推送镜像
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -91,7 +91,7 @@ jobs:
   deploy:
     name: 部署到 dev 主机
     needs: build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: dev
