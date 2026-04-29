@@ -11,7 +11,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
     -o /out/llmhub ./cmd/llmhub
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM alpine:3.20
+RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
 WORKDIR /app
 COPY --from=build /out/llmhub /app/llmhub
 COPY configs /app/configs
