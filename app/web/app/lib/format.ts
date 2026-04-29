@@ -12,7 +12,7 @@ export function fmtNumber(n: number): string {
   return n.toLocaleString('zh-CN');
 }
 
-export function fmtDateTime(iso: string): string {
+export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
