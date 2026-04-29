@@ -35,7 +35,7 @@ env:
 jobs:
   prepare:
     name: 校验 + 检出 main
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: 校验版本号格式
@@ -71,7 +71,7 @@ jobs:
   build:
     name: 构建并推送正式镜像
     needs: prepare
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -124,7 +124,7 @@ jobs:
   tag:
     name: 打 git tag
     needs: build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: 检出 main

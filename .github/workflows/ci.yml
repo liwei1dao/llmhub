@@ -4,9 +4,9 @@
 # 触发：push 到 main / pull_request
 # 注意：不在 dev 分支跑（dev 走 Dev Build & Deploy）
 #
-# 设计原则：完全不依赖 github.com 上的 actions —— self-hosted runner
-# 在中国网络下从 github clone 极慢，因此 checkout / setup-go /
-# golangci-lint / buf / pnpm 全部用裸命令实现。
+# 设计原则：完全不依赖 github.com 上的 actions —— Gitea Actions
+# runner 在中国网络下从 github clone 极慢，因此 checkout /
+# setup-go / golangci-lint / buf / pnpm 全部用裸命令实现。
 # ============================================================
 name: CI
 
@@ -26,7 +26,7 @@ env:
 jobs:
   go:
     name: Go build & test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     # 不在 CI 里临时拉起 postgres/redis/nats —— 当前 *_test.go 全部
@@ -89,7 +89,7 @@ jobs:
 
   proto:
     name: Proto lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     defaults:
       run:
@@ -120,7 +120,7 @@ jobs:
 
   web:
     name: Web lint & typecheck (${{ matrix.app }})
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false

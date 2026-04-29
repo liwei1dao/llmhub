@@ -40,7 +40,7 @@ concurrency:
 jobs:
   guard:
     name: 校验输入
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: 校验版本号格式
@@ -64,7 +64,7 @@ jobs:
   verify:
     name: 校验镜像 ${{ inputs.version }} 存在
     needs: guard
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: 登录 registry
@@ -90,7 +90,7 @@ jobs:
   deploy:
     name: 部署到 prod 主机
     needs: verify
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
       name: production
