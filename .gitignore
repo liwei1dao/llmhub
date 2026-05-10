@@ -33,6 +33,7 @@ node_modules/
 out/
 .turbo/
 pnpm-lock.yaml.backup
+*.tsbuildinfo
 
 # Logs
 *.log
