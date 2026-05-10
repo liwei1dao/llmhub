@@ -13,11 +13,10 @@ type PlatformCategory struct {
 
 // Categories is the immutable platform-category dictionary. Order in
 // the source map is irrelevant; SortOrder governs display.
+//
+// MVP: 只激活 "llm"（大模型）。后续接入语音/翻译能力时再加 asr / tts / mt。
 var Categories = map[string]PlatformCategory{
 	"llm": {ID: "llm", Name: "大模型", SortOrder: 10},
-	"asr": {ID: "asr", Name: "语音识别", SortOrder: 20},
-	"tts": {ID: "tts", Name: "语音合成", SortOrder: 30},
-	"mt":  {ID: "mt", Name: "翻译", SortOrder: 40},
 }
 
 // CategoriesSorted returns the category dictionary as a slice ordered

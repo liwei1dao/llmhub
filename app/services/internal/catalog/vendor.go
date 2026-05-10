@@ -1,9 +1,18 @@
 package catalog
 
-// Vendor is an upstream provider (firm-level: 火山 / 阿里 / 腾讯 / OpenAI / ...).
+// Vendor is an upstream provider (firm-level entity: 火山 / 阿里 / 腾讯 / OpenAI / ...).
 // One vendor groups several VendorProducts (业务板块). Vendors are code
-// constants because adding a new vendor always requires writing the
-// master-account billing adapter and at least one product adapter.
+// constants because adding a new vendor always requires:
+//
+//  1. 在 internal/vendors/<id>/ 写新的厂商目录（账号鉴权 schema、业务板块、能力适配器）
+//  2. 在本文件 Vendors map 里登记一条 metadata
+//  3. 如果有自动余额/账单读取，挂上 billing adapter
+//
+// 当前 MVP 阶段只激活 volc 一家。其它厂商在 internal/vendors/ 下还没写适配器，
+// 因此不放进字典；运营在新增账号表单里看不到它们。
+//
+// 之前曾经登记过的 aliyun / tencent / openai / anthropic / deepseek metadata
+// 一并移除——保留它们没有意义，反而误导运营以为可用。
 type Vendor struct {
 	// ID is the stable lower-case slug used across DB foreign keys.
 	// Format: short ASCII identifier, no dots.
@@ -12,18 +21,21 @@ type Vendor struct {
 	Name string `json:"name"`
 	// LogoURL is an optional CDN reference. Empty = render initials.
 	LogoURL string `json:"logo_url,omitempty"`
-	// ConsoleURL points to the vendor's console root, used by admin
+	// ConsoleURL points to the vendor's official site / console, used by admin
 	// UI as a quick-jump for reconciliation work.
 	ConsoleURL string `json:"console_url,omitempty"`
 	// MasterAuthSchema describes the credentials required to query the
 	// vendor's master account (balance / billing endpoints) — distinct
 	// from the per-product credentials that actually call business
-	// APIs. For lightweight vendors (OpenAI / Anthropic) the schema
-	// reduces to a single API key.
+	// APIs. Each vendor designs its own schema; do not assume a shared
+	// shape across vendors.
 	MasterAuthSchema []FieldSpec `json:"master_auth_schema"`
 }
 
 // Vendors is the immutable vendor dictionary keyed by Vendor.ID.
+//
+// MVP: 只有 "volc"（火山引擎）。新增厂商需要在 internal/vendors/<id>/ 落地
+// 适配器之后再来这里登记。
 var Vendors = map[string]Vendor{
 	"volc": {
 		ID:         "volc",
@@ -36,50 +48,6 @@ var Vendors = map[string]Vendor{
 		MasterAuthSchema: []FieldSpec{
 			{Key: "account", Label: "登录账号（手机号/邮箱）", Required: true},
 			{Key: "password", Label: "登录密码", Sensitive: true, Required: true},
-		},
-	},
-	"aliyun": {
-		ID:         "aliyun",
-		Name:       "阿里云",
-		ConsoleURL: "https://home.console.aliyun.com/",
-		MasterAuthSchema: []FieldSpec{
-			{Key: "access_key_id", Label: "AccessKey ID", Required: true},
-			{Key: "access_key_secret", Label: "AccessKey Secret", Sensitive: true, Required: true},
-		},
-	},
-	"tencent": {
-		ID:         "tencent",
-		Name:       "腾讯云",
-		ConsoleURL: "https://console.cloud.tencent.com/",
-		MasterAuthSchema: []FieldSpec{
-			{Key: "secret_id", Label: "SecretId", Required: true},
-			{Key: "secret_key", Label: "SecretKey", Sensitive: true, Required: true},
-		},
-	},
-	"openai": {
-		ID:         "openai",
-		Name:       "OpenAI",
-		ConsoleURL: "https://platform.openai.com/",
-		// OpenAI 没有独立的"主账号鉴权"，billing endpoint 用同一把 sk-…，
-		// 这里复用为 master schema，运营侧填一次即可同时用于查余额和调业务。
-		MasterAuthSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key (sk-…)", Sensitive: true, Required: true},
-		},
-	},
-	"anthropic": {
-		ID:         "anthropic",
-		Name:       "Anthropic",
-		ConsoleURL: "https://console.anthropic.com/",
-		MasterAuthSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
-		},
-	},
-	"deepseek": {
-		ID:         "deepseek",
-		Name:       "DeepSeek",
-		ConsoleURL: "https://platform.deepseek.com/",
-		MasterAuthSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
 		},
 	},
 }

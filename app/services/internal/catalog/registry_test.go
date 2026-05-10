@@ -11,36 +11,28 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// TestExpectedShape pins down the MVP catalog size: only volc/ark/chat.
+// 后续接入新 vendor / product / capability 时同步更新这里的数字，避免静默
+// 走样。
 func TestExpectedShape(t *testing.T) {
-	if got, want := len(Categories), 4; got != want {
+	if got, want := len(Categories), 1; got != want {
 		t.Errorf("Categories len = %d, want %d", got, want)
 	}
-	if got, want := len(Vendors), 6; got != want {
+	if got, want := len(Vendors), 1; got != want {
 		t.Errorf("Vendors len = %d, want %d", got, want)
 	}
-	if got, want := len(Products), 12; got != want {
+	if got, want := len(Products), 1; got != want {
 		t.Errorf("Products len = %d, want %d", got, want)
 	}
-	// 13 capabilities per the v0.2 schema doc.
-	if got, want := len(Capabilities), 13; got != want {
+	if got, want := len(Capabilities), 1; got != want {
 		t.Errorf("Capabilities len = %d, want %d", got, want)
 	}
 }
 
 func TestProductsByVendorPartition(t *testing.T) {
 	groups := ProductsByVendor()
-	cases := map[string]int{
-		"volc":      3,
-		"aliyun":    3,
-		"tencent":   3,
-		"openai":    1,
-		"anthropic": 1,
-		"deepseek":  1,
-	}
-	for vendor, want := range cases {
-		if got := len(groups[vendor]); got != want {
-			t.Errorf("vendor %q: got %d products, want %d", vendor, got, want)
-		}
+	if got := len(groups["volc"]); got != 1 {
+		t.Errorf("vendor volc: got %d products, want 1", got)
 	}
 }
 
@@ -49,7 +41,7 @@ func TestProductAllowsCapability(t *testing.T) {
 		t.Errorf("volc.ark should allow chat")
 	}
 	if ProductAllowsCapability("volc.ark", "asr_realtime") {
-		t.Errorf("volc.ark should not allow asr_realtime (that's volc.speech)")
+		t.Errorf("volc.ark should not allow asr_realtime (that capability is not yet activated)")
 	}
 	if ProductAllowsCapability("nonexistent", "chat") {
 		t.Errorf("unknown product should not allow anything")
@@ -57,22 +49,11 @@ func TestProductAllowsCapability(t *testing.T) {
 }
 
 func TestCapabilityCategories(t *testing.T) {
-	// Spot-check a few representative mappings.
-	cases := map[string]string{
-		"chat":            "llm",
-		"vision":          "llm",
-		"asr_realtime":    "asr",
-		"tts_voice_clone": "tts",
-		"mt_document":     "mt",
+	c, ok := Capabilities["chat"]
+	if !ok {
+		t.Fatalf("capability chat missing")
 	}
-	for capID, wantCat := range cases {
-		c, ok := Capabilities[capID]
-		if !ok {
-			t.Errorf("capability %q missing", capID)
-			continue
-		}
-		if c.CategoryID != wantCat {
-			t.Errorf("capability %q category = %q, want %q", capID, c.CategoryID, wantCat)
-		}
+	if c.CategoryID != "llm" {
+		t.Errorf("chat.CategoryID = %q, want llm", c.CategoryID)
 	}
 }

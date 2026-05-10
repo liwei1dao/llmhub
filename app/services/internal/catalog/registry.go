@@ -120,3 +120,19 @@ func ProductAllowsCapability(productID, capID string) bool {
 	}
 	return false
 }
+
+// ProductsByVendor groups all known products by their vendor id. Each
+// known vendor always appears as a key (possibly with an empty slice)
+// so callers don't have to nil-check vendor lookup. Order within a
+// vendor's slice follows Go map iteration (i.e. unstable) — callers
+// should sort if they care.
+func ProductsByVendor() map[string][]VendorProduct {
+	out := make(map[string][]VendorProduct, len(Vendors))
+	for vid := range Vendors {
+		out[vid] = nil
+	}
+	for _, p := range Products {
+		out[p.VendorID] = append(out[p.VendorID], p)
+	}
+	return out
+}

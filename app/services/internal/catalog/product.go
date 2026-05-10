@@ -6,13 +6,13 @@ package catalog
 // boards are not interchangeable (a 火山方舟 token cannot call 火山语音).
 //
 // Products are code constants because adding one always requires:
-//   1. writing the credential schema here,
-//   2. writing the capability adapters in internal/upstream/<vendor>/<board>/,
-//   3. registering them with the upstream registry at startup.
+//   1. 在 internal/vendors/<vendor>/<board>/ 写适配器
+//   2. 在本文件 Products map 里登记 metadata + credential schema
+//   3. 在 internal/vendors/all.go (或同等汇总点) 注册适配器
 type VendorProduct struct {
 	// ID is the stable composite identifier "<vendor>.<board>", e.g.
-	// "volc.ark", "aliyun.nls". Used in pool.credentials.product_id
-	// and catalog.platform_services.vendor_product_id.
+	// "volc.ark". Used in pool.credentials.product_id and
+	// catalog.platform_services.vendor_product_id.
 	ID string `json:"id"`
 	// VendorID must match a Vendor.ID.
 	VendorID string `json:"vendor_id"`
@@ -28,8 +28,8 @@ type VendorProduct struct {
 	// is enforced by the application layer at binding-create time.
 	AllowedCapabilities []string `json:"allowed_capabilities"`
 	// ProtocolFamily picks the wire protocol family the adapter must
-	// implement. Free-form string; see internal/upstream registry
-	// for accepted values.
+	// implement. Free-form string; see internal/vendors/<id>/ for
+	// accepted values.
 	ProtocolFamily string `json:"protocol_family"`
 	// EndpointTemplate is an optional template for the upstream base
 	// URL. Concrete adapters interpolate region / cluster placeholders.
@@ -38,15 +38,11 @@ type VendorProduct struct {
 
 // Products is the immutable product dictionary keyed by VendorProduct.ID.
 //
-// Twelve products as of v0.2:
-//   3 × volc      (ark / speech / translate)
-//   3 × aliyun    (dashscope / nls / mt)
-//   3 × tencent   (hunyuan / speech / mt)
-//   1 × openai    (api)
-//   1 × anthropic (api)
-//   1 × deepseek  (api)
+// MVP: 只有 "volc.ark"（火山方舟）。其它板块（语音 / 翻译 / 阿里 / 腾讯 / OpenAI /
+// Anthropic / DeepSeek）原先列在这里只是占位，没有任何适配器代码——保留它们会
+// 让运营误以为可用。等到对应 internal/vendors/<id>/<board>/ 写出适配器后再来
+// 这里登记。
 var Products = map[string]VendorProduct{
-	// ── volc ────────────────────────────────────────────────────
 	"volc.ark": {
 		ID:       "volc.ark",
 		VendorID: "volc",
@@ -55,160 +51,8 @@ var Products = map[string]VendorProduct{
 			{Key: "app_id", Label: "App ID", Required: true},
 			{Key: "app_token", Label: "App Token", Sensitive: true, Required: true},
 		},
-		AllowedCapabilities: []string{"chat", "embedding", "vision", "image_gen"},
+		AllowedCapabilities: []string{"chat"},
 		ProtocolFamily:      "openai_compat",
 		EndpointTemplate:    "https://ark.cn-beijing.volces.com/api/v3",
 	},
-	"volc.speech": {
-		ID:       "volc.speech",
-		VendorID: "volc",
-		Name:     "语音技术",
-		CredentialSchema: []FieldSpec{
-			{Key: "appid", Label: "AppID", Required: true},
-			{Key: "access_token", Label: "Access Token", Sensitive: true, Required: true},
-			{Key: "cluster", Label: "Cluster", Required: true},
-		},
-		AllowedCapabilities: []string{"asr_realtime", "asr_offline", "tts_standard", "tts_voice_clone"},
-		ProtocolFamily:      "volc_signed_v4",
-		EndpointTemplate:    "wss://openspeech.bytedance.com",
-	},
-	"volc.translate": {
-		ID:       "volc.translate",
-		VendorID: "volc",
-		Name:     "机器翻译",
-		CredentialSchema: []FieldSpec{
-			{Key: "access_key_id", Label: "Access Key ID", Required: true},
-			{Key: "secret_access_key", Label: "Secret Access Key", Sensitive: true, Required: true},
-			{Key: "region", Label: "区域", Required: true, Pattern: "^[a-z]+-[a-z0-9-]+$"},
-		},
-		AllowedCapabilities: []string{"mt_text", "mt_document"},
-		ProtocolFamily:      "volc_signed_v4",
-		EndpointTemplate:    "https://translate.volcengineapi.com",
-	},
-
-	// ── aliyun ──────────────────────────────────────────────────
-	"aliyun.dashscope": {
-		ID:       "aliyun.dashscope",
-		VendorID: "aliyun",
-		Name:     "百炼·大模型",
-		CredentialSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"chat", "embedding", "rerank"},
-		ProtocolFamily:      "openai_compat",
-		EndpointTemplate:    "https://dashscope.aliyuncs.com/compatible-mode/v1",
-	},
-	"aliyun.nls": {
-		ID:       "aliyun.nls",
-		VendorID: "aliyun",
-		Name:     "智能语音 NLS",
-		CredentialSchema: []FieldSpec{
-			{Key: "app_key", Label: "AppKey", Required: true},
-			// access_token 由 STS 临时签发，需要定期刷新；schema 里仍按
-			// 静态 token 录入，刷新策略由 adapter 内部处理。
-			{Key: "access_token", Label: "Access Token", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"asr_realtime", "asr_offline", "tts_standard"},
-		ProtocolFamily:      "aliyun_nls_ws",
-		EndpointTemplate:    "wss://nls-gateway.cn-shanghai.aliyuncs.com",
-	},
-	"aliyun.mt": {
-		ID:       "aliyun.mt",
-		VendorID: "aliyun",
-		Name:     "机器翻译",
-		CredentialSchema: []FieldSpec{
-			{Key: "access_key_id", Label: "AccessKey ID", Required: true},
-			{Key: "access_key_secret", Label: "AccessKey Secret", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"mt_text", "mt_document"},
-		ProtocolFamily:      "aliyun_pop",
-		EndpointTemplate:    "https://mt.aliyuncs.com",
-	},
-
-	// ── tencent ─────────────────────────────────────────────────
-	"tencent.hunyuan": {
-		ID:       "tencent.hunyuan",
-		VendorID: "tencent",
-		Name:     "混元·大模型",
-		CredentialSchema: []FieldSpec{
-			{Key: "secret_id", Label: "SecretId", Required: true},
-			{Key: "secret_key", Label: "SecretKey", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"chat", "vision"},
-		ProtocolFamily:      "tencent_signed_v3",
-		EndpointTemplate:    "https://hunyuan.tencentcloudapi.com",
-	},
-	"tencent.speech": {
-		ID:       "tencent.speech",
-		VendorID: "tencent",
-		Name:     "语音 ASR/TTS",
-		CredentialSchema: []FieldSpec{
-			{Key: "app_id", Label: "AppId", Required: true},
-			{Key: "secret_id", Label: "SecretId", Required: true},
-			{Key: "secret_key", Label: "SecretKey", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"asr_realtime", "asr_offline", "tts_standard"},
-		ProtocolFamily:      "tencent_signed_v3",
-		EndpointTemplate:    "wss://asr.cloud.tencent.com",
-	},
-	"tencent.mt": {
-		ID:       "tencent.mt",
-		VendorID: "tencent",
-		Name:     "机器翻译",
-		CredentialSchema: []FieldSpec{
-			{Key: "secret_id", Label: "SecretId", Required: true},
-			{Key: "secret_key", Label: "SecretKey", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"mt_text", "mt_document"},
-		ProtocolFamily:      "tencent_signed_v3",
-		EndpointTemplate:    "https://tmt.tencentcloudapi.com",
-	},
-
-	// ── openai / anthropic / deepseek (单板块) ──────────────────
-	"openai.api": {
-		ID:       "openai.api",
-		VendorID: "openai",
-		Name:     "OpenAI API",
-		CredentialSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key (sk-…)", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"chat", "embedding", "image_gen", "asr_whisper", "tts_standard"},
-		ProtocolFamily:      "openai_native",
-		EndpointTemplate:    "https://api.openai.com/v1",
-	},
-	"anthropic.api": {
-		ID:       "anthropic.api",
-		VendorID: "anthropic",
-		Name:     "Anthropic API",
-		CredentialSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"chat", "vision"},
-		ProtocolFamily:      "anthropic_native",
-		EndpointTemplate:    "https://api.anthropic.com/v1",
-	},
-	"deepseek.api": {
-		ID:       "deepseek.api",
-		VendorID: "deepseek",
-		Name:     "DeepSeek API",
-		CredentialSchema: []FieldSpec{
-			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
-		},
-		AllowedCapabilities: []string{"chat", "embedding"},
-		ProtocolFamily:      "openai_compat",
-		EndpointTemplate:    "https://api.deepseek.com/v1",
-	},
-}
-
-// ProductsByVendor groups products under their owning vendor in a
-// stable order (the order they appear in Products is preserved within
-// each vendor, vendors themselves come out in Products' iteration
-// order — callers that need deterministic ordering should sort the
-// outer keys).
-func ProductsByVendor() map[string][]VendorProduct {
-	out := make(map[string][]VendorProduct, len(Vendors))
-	for _, p := range Products {
-		out[p.VendorID] = append(out[p.VendorID], p)
-	}
-	return out
 }
