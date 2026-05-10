@@ -26,20 +26,20 @@ export default function VendorsPage() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {rows.map((v) => (
-          <div key={v.id} className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+          <div key={v.id} className="rounded-2xl border border-ink-200 bg-white p-5">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-base font-semibold text-white">{v.name}</div>
+                <div className="text-base font-semibold text-ink-900">{v.name}</div>
                 <div className="mt-0.5 text-xs text-ink-500 mono">{v.id}</div>
               </div>
-              <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[11px] text-ink-200">
+              <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] text-ink-800">
                 {(v.products ?? []).length} 板块
               </span>
             </div>
@@ -53,27 +53,27 @@ export default function VendorsPage() {
             ) : null}
             <div className="mt-3 text-[11px] text-ink-500">
               主账号鉴权字段：
-              <span className="mono text-ink-200">
+              <span className="mono text-ink-800">
                 {v.master_auth_schema.map((f) => f.key).join(' · ')}
               </span>
             </div>
 
             <div className="mt-4 space-y-2">
               {(v.products ?? []).map((p) => (
-                <div key={p.id} className="rounded-lg border border-ink-700 bg-ink-900 p-3">
+                <div key={p.id} className="rounded-lg border border-ink-200 bg-white p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-white">{p.name}</div>
+                    <div className="text-sm font-medium text-ink-900">{p.name}</div>
                     <span className="text-[11px] text-ink-500 mono">{p.id}</span>
                   </div>
                   <div className="mt-1 text-[11px] text-ink-500">
                     凭据：
-                    <span className="mono text-ink-200">
+                    <span className="mono text-ink-800">
                       {p.credential_schema.map((f) => f.key).join(' · ')}
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] text-ink-500">
                     可绑：
-                    <span className="text-ink-200">{p.allowed_capabilities.join(' · ')}</span>
+                    <span className="text-ink-800">{p.allowed_capabilities.join(' · ')}</span>
                   </div>
                 </div>
               ))}

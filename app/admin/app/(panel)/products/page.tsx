@@ -25,14 +25,14 @@ export default function ProductsPage() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">板块 ID</th>
               <th className="px-4 py-2.5 text-left">中文名</th>
@@ -42,10 +42,10 @@ export default function ProductsPage() {
               <th className="px-4 py-2.5 text-left">协议</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.map((p) => (
               <tr key={p.id}>
-                <td className="px-4 py-2.5 mono text-ink-200">{p.id}</td>
+                <td className="px-4 py-2.5 mono text-ink-800">{p.id}</td>
                 <td className="px-4 py-2.5">{p.name}</td>
                 <td className="px-4 py-2.5 text-ink-500">{p.vendor_id}</td>
                 <td className="px-4 py-2.5 text-xs text-ink-500 mono">

@@ -60,7 +60,7 @@ export default function CredentialDetailPage({ params }: { params: Promise<{ id:
     return (
       <div className="space-y-4">
         <PageHeader title="凭据详情" />
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function CredentialDetailPage({ params }: { params: Promise<{ id:
           availableCaps.length > 0 ? (
             <button
               onClick={() => setShowAdd((s) => !s)}
-              className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-ink-900"
+              className="rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm font-medium text-ink-900 hover:bg-ink-50"
             >
               {showAdd ? '收起' : '+ 加服务'}
             </button>
@@ -117,12 +117,12 @@ export default function CredentialDetailPage({ params }: { params: Promise<{ id:
         />
       ) : null}
 
-      <div className="rounded-2xl border border-ink-700 bg-ink-800 overflow-hidden">
-        <div className="px-5 py-3 border-b border-ink-700 text-sm font-medium">
+      <div className="rounded-2xl border border-ink-200 bg-white overflow-hidden">
+        <div className="px-5 py-3 border-b border-ink-200 text-sm font-medium">
           服务绑定（{data.bindings.length}）
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2 text-left">能力</th>
               <th className="px-4 py-2 text-left">tier</th>
@@ -133,7 +133,7 @@ export default function CredentialDetailPage({ params }: { params: Promise<{ id:
               <th className="px-4 py-2 text-left">状态</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {data.bindings.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-5 py-8 text-center text-ink-500">
@@ -152,7 +152,7 @@ export default function CredentialDetailPage({ params }: { params: Promise<{ id:
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-800 p-3">
+    <div className="rounded-lg border border-ink-200 bg-white p-3">
       <div className="text-[11px] text-ink-500">{label}</div>
       <div className="mt-0.5 text-sm">{value}</div>
     </div>
@@ -175,10 +175,10 @@ function BindingRow({ b }: { b: ServiceBinding }) {
         <span
           className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
             b.status === 'active'
-              ? 'bg-emerald-500/20 text-emerald-300'
+              ? 'bg-emerald-100 text-emerald-700'
               : b.status === 'cooldown'
-                ? 'bg-amber-500/20 text-amber-300'
-                : 'bg-rose-500/20 text-rose-300'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-rose-100 text-rose-700'
           }`}
         >
           {b.status}
@@ -232,14 +232,14 @@ function AddBindingForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-2xl border border-ink-700 bg-ink-800 p-5"
+      className="rounded-2xl border border-ink-200 bg-white p-5"
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-white">加服务</div>
+        <div className="text-sm font-semibold text-ink-900">加服务</div>
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-ink-500 hover:text-ink-200"
+          className="text-xs text-ink-500 hover:text-ink-800"
         >
           关闭
         </button>
@@ -250,7 +250,7 @@ function AddBindingForm({
           <select
             value={capability}
             onChange={(e) => setCapability(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           >
             {available.map((c) => {
               const cap = caps.find((x) => x.id === c);
@@ -267,7 +267,7 @@ function AddBindingForm({
           <select
             value={tier}
             onChange={(e) => setTier(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           >
             <option value="free">free</option>
             <option value="pro">pro</option>
@@ -280,7 +280,7 @@ function AddBindingForm({
             type="number"
             value={qps}
             onChange={(e) => setQPS(Number(e.target.value))}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           />
         </label>
         <label className="block">
@@ -289,7 +289,7 @@ function AddBindingForm({
             type="number"
             value={daily}
             onChange={(e) => setDaily(Number(e.target.value))}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           />
         </label>
         <label className="block">
@@ -299,23 +299,23 @@ function AddBindingForm({
             step="0.01"
             value={cost}
             onChange={(e) => setCost(Number(e.target.value))}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           />
         </label>
       </div>
-      {error ? <div className="mt-3 text-sm text-rose-400">{error}</div> : null}
+      {error ? <div className="mt-3 text-sm text-rose-700">{error}</div> : null}
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200"
+          className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 disabled:opacity-60"
+          className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-60"
         >
           {submitting ? '提交中…' : '加服务'}
         </button>

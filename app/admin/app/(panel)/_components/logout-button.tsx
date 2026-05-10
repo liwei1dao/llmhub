@@ -11,7 +11,7 @@ export default function LogoutButton() {
         setToken('');
         router.push('/login');
       }}
-      className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink-500 transition hover:bg-ink-700 hover:text-ink-200"
+      className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink-500 transition hover:bg-ink-100 hover:text-ink-800"
     >
       退出登录
     </button>

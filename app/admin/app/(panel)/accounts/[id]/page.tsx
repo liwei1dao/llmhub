@@ -75,7 +75,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         title={`🪪 ${account.name}`}
         subtitle={
           <span className="text-xs text-ink-500">
-            <Link href="/accounts" className="hover:text-ink-200">账号管理</Link>
+            <Link href="/accounts" className="hover:text-ink-800">账号管理</Link>
             <span className="mx-2 text-ink-700">/</span>
             <span className="mono">acct_{account.id}</span>
           </span>
@@ -84,7 +84,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           <button
             onClick={archive}
             disabled={busy || account.status === 'archived'}
-            className="rounded-lg border border-rose-700 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950 disabled:opacity-40"
+            className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-40"
           >
             归档账号
           </button>
@@ -104,7 +104,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           <Field label="主体">{account.entity || <Dim>—</Dim>}</Field>
           <Field label="控制台">
             {account.console_url ? (
-              <a className="text-brand-300 hover:underline" href={account.console_url} target="_blank" rel="noreferrer">
+              <a className="text-brand-600 hover:underline" href={account.console_url} target="_blank" rel="noreferrer">
                 {account.console_url}
               </a>
             ) : (
@@ -121,7 +121,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         <Grid>
           <Field label="当前余额">
             {account.last_balance_cents != null ? (
-              <span className="text-emerald-300 text-base font-medium">
+              <span className="text-emerald-700 text-base font-medium">
                 {fmtCents(account.last_balance_cents, account.last_balance_currency || 'CNY')}
               </span>
             ) : (
@@ -133,7 +133,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           </Field>
           <Field label="抓取错误">
             {account.last_balance_error ? (
-              <span className="text-rose-300 text-xs">{account.last_balance_error}</span>
+              <span className="text-rose-700 text-xs">{account.last_balance_error}</span>
             ) : (
               <Dim>—</Dim>
             )}
@@ -158,9 +158,9 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           </div>
         }
       >
-        <div className="overflow-hidden rounded-xl border border-ink-700">
+        <div className="overflow-hidden rounded-xl border border-ink-200">
           <table className="w-full text-sm">
-            <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+            <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
               <tr>
                 <th className="px-4 py-2.5 text-left">名称</th>
                 <th className="px-4 py-2.5 text-left">业务板块</th>
@@ -171,7 +171,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 <th className="px-4 py-2.5 text-left">状态</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ink-700">
+            <tbody className="divide-y divide-ink-200">
               {credentials.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-ink-500">
@@ -180,21 +180,21 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 </tr>
               ) : (
                 credentials.map((c) => (
-                  <tr key={c.id} className="hover:bg-ink-900/30">
+                  <tr key={c.id} className="hover:bg-ink-50">
                     <td className="px-4 py-2.5">
-                      <Link href={`/credentials/${c.id}`} className="text-ink-200 hover:text-brand-300">
+                      <Link href={`/credentials/${c.id}`} className="text-ink-800 hover:text-brand-600">
                         🔑 {c.name}
                       </Link>
                       <div className="text-[11px] mono text-ink-500">cred_{c.id}</div>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-ink-400">{c.product_id}</td>
+                    <td className="px-4 py-2.5 text-xs text-ink-500">{c.product_id}</td>
                     <td className="px-4 py-2.5 text-xs">{c.env}</td>
                     <td className="px-4 py-2.5 text-right">
                       <HealthBar score={c.health_score} />
                     </td>
                     <td className="px-4 py-2.5 text-right text-xs">
                       {c.consecutive_failures > 0 ? (
-                        <span className="text-rose-300">{c.consecutive_failures}</span>
+                        <span className="text-rose-700">{c.consecutive_failures}</span>
                       ) : (
                         <Dim>0</Dim>
                       )}
@@ -228,9 +228,9 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+    <section className="rounded-2xl border border-ink-200 bg-white p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ink-200">{title}</h2>
+        <h2 className="text-sm font-semibold text-ink-800">{title}</h2>
         {rightSlot}
       </div>
       {children}
@@ -257,7 +257,7 @@ function Dim({ children }: { children: ReactNode }) {
 
 function ErrorBox({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
       {text}
     </div>
   );
@@ -266,18 +266,18 @@ function ErrorBox({ text }: { text: string }) {
 function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'cooldown' || status === 'frozen'
-        ? 'bg-amber-500/20 text-amber-300'
-        : 'bg-rose-500/20 text-rose-300';
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-rose-100 text-rose-700';
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${tone}`}>{status}</span>;
 }
 
 function Pill({ tone, children }: { tone: 'emerald' | 'amber'; children: ReactNode }) {
   const cls =
     tone === 'emerald'
-      ? 'bg-emerald-500/15 text-emerald-300'
-      : 'bg-amber-500/15 text-amber-300';
+      ? 'bg-emerald-100 text-emerald-700'
+      : 'bg-amber-100 text-amber-700';
   return <span className={`inline-flex rounded-full px-2 py-0.5 ${cls}`}>{children}</span>;
 }
 
@@ -287,10 +287,10 @@ function HealthBar({ score }: { score: number }) {
     pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500';
   return (
     <div className="flex items-center justify-end gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-700">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-100">
         <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs tabular-nums text-ink-400 w-7 text-right">{pct}</span>
+      <span className="text-xs tabular-nums text-ink-500 w-7 text-right">{pct}</span>
     </div>
   );
 }

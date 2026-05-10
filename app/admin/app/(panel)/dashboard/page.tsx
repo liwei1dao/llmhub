@@ -46,7 +46,7 @@ export default function Dashboard() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
@@ -97,10 +97,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RecentTable
           title="最近主账号"
-          href="/admin/accounts"
+          href="/accounts"
           empty={
             <>
-              暂无主账号 — 去 <Link href="/admin/accounts" className="underline">主账号管理</Link> 创建
+              暂无主账号 — 去 <Link href="/accounts" className="underline">主账号管理</Link> 创建
             </>
           }
           headers={['名称', '厂商', '主体', '状态']}
@@ -113,10 +113,10 @@ export default function Dashboard() {
         />
         <RecentTable
           title="最近凭据"
-          href="/admin/credentials"
+          href="/credentials"
           empty={
             <>
-              暂无凭据 — 去 <Link href="/admin/credentials/new" className="underline">新增凭据</Link>
+              暂无凭据 — 去 <Link href="/credentials/new" className="underline">新增凭据</Link>
             </>
           }
           headers={['名称', '板块', '健康', '状态']}
@@ -156,16 +156,16 @@ function Stat({
 }) {
   const tone =
     accent === 'emerald'
-      ? 'text-emerald-400'
+      ? 'text-emerald-700'
       : accent === 'amber'
-        ? 'text-amber-400'
+        ? 'text-amber-700'
         : accent === 'rose'
-          ? 'text-rose-400'
+          ? 'text-rose-700'
           : accent === 'brand'
-            ? 'text-brand-300'
-            : 'text-white';
+            ? 'text-brand-600'
+            : 'text-ink-900';
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5">
       <div className="text-sm text-ink-500">{label}</div>
       <div className={`mt-2 text-3xl font-semibold tracking-tight ${tone}`}>
         {value === undefined ? <span className="text-ink-500">—</span> : value.toLocaleString()}
@@ -190,15 +190,15 @@ function RecentTable({
   empty: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800">
-      <div className="flex items-center justify-between border-b border-ink-700 px-5 py-3 text-sm font-medium text-white">
+    <div className="rounded-2xl border border-ink-200 bg-white">
+      <div className="flex items-center justify-between border-b border-ink-200 px-5 py-3 text-sm font-medium text-ink-900">
         <span>{title}</span>
         <Link href={href} className="text-xs text-brand-200 hover:underline">
           查看全部 →
         </Link>
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+        <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
           <tr>
             {headers.map((h) => (
               <th key={h} className="px-5 py-2 text-left">
@@ -207,7 +207,7 @@ function RecentTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-ink-700">
+        <tbody className="divide-y divide-ink-200">
           {rows.length === 0 ? (
             <tr>
               <td colSpan={headers.length} className="px-5 py-8 text-center text-ink-500">

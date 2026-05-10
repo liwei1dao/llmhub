@@ -36,12 +36,12 @@ export default function UsersPage() {
     <div className="space-y-6">
       <PageHeader title="用户" subtitle="按邮箱 / 手机号搜索" />
 
-      <div className="flex gap-3 rounded-2xl border border-ink-700 bg-ink-800 p-4">
+      <div className="flex gap-3 rounded-2xl border border-ink-200 bg-white p-4">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="邮箱 / 手机号"
-          className="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+          className="flex-1 rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
         />
         <button
           onClick={load}
@@ -52,14 +52,14 @@ export default function UsersPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-xs uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-xs uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">ID</th>
               <th className="px-4 py-2.5 text-left">邮箱</th>
@@ -72,7 +72,7 @@ export default function UsersPage() {
               <th className="px-4 py-2.5 text-left">最近登录</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-5 py-12 text-center text-ink-500">
@@ -83,7 +83,7 @@ export default function UsersPage() {
               rows.map((u) => (
                 <tr key={u.id}>
                   <td className="px-4 py-2.5 mono">
-                    <Link href={`/admin/users/${u.id}`} className="text-brand-400 hover:underline">
+                    <Link href={`/admin/users/${u.id}`} className="text-brand-600 hover:underline">
                       {u.id}
                     </Link>
                   </td>

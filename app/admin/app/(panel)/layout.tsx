@@ -28,12 +28,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <RequireToken>
       <div className="flex min-h-screen">
-        <aside className="hidden w-60 shrink-0 border-r border-ink-700 bg-ink-800 px-4 py-6 md:block">
+        <aside className="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
           <Link href="/dashboard" className="flex items-center gap-2 px-2 pb-6">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">
               A
             </span>
-            <span className="font-semibold tracking-tight text-white">Admin</span>
+            <span className="font-semibold tracking-tight text-ink-900">Admin</span>
           </Link>
           <nav className="space-y-4">
             {NAV.map((g, i) => (
@@ -48,7 +48,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     <Link
                       key={n.href}
                       href={n.href}
-                      className="block rounded-lg px-3 py-2 text-sm text-ink-200 transition hover:bg-ink-700"
+                      className="block rounded-lg px-3 py-2 text-sm text-ink-800 transition hover:bg-ink-100"
                     >
                       {n.label}
                     </Link>
@@ -57,7 +57,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </div>
             ))}
           </nav>
-          <div className="mt-8 border-t border-ink-700 pt-4">
+          <div className="mt-8 border-t border-ink-200 pt-4">
             <LogoutButton />
           </div>
         </aside>

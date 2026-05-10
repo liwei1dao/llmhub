@@ -64,7 +64,7 @@ export default function SKUsPage() {
         actions={
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50"
           >
             {showForm ? '收起' : '+ 新增 SKU'}
           </button>
@@ -83,7 +83,7 @@ export default function SKUsPage() {
         />
       ) : null}
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-700 bg-ink-800 p-4 text-sm">
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
         <Filter
           label="平台分类"
           value={filter.category}
@@ -119,7 +119,7 @@ export default function SKUsPage() {
             value={filter.q}
             onChange={(e) => setFilter({ ...filter, q: e.target.value })}
             placeholder="ID / 显示名"
-            className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+            className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
           />
         </label>
         <button
@@ -131,14 +131,14 @@ export default function SKUsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">SKU</th>
               <th className="px-4 py-2.5 text-left">分类</th>
@@ -152,7 +152,7 @@ export default function SKUsPage() {
               <th className="px-4 py-2.5 text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-5 py-12 text-center text-ink-500">
@@ -163,13 +163,13 @@ export default function SKUsPage() {
               rows.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-2.5">
-                    <div className="text-ink-200">{s.display_name}</div>
+                    <div className="text-ink-800">{s.display_name}</div>
                     <div className="mono text-[11px] text-ink-500">{s.id}</div>
                   </td>
                   <td className="px-4 py-2.5 text-xs text-ink-500">{s.category_id}</td>
                   <td className="px-4 py-2.5 mono text-xs">{s.vendor_product_id}</td>
                   <td className="px-4 py-2.5 mono text-xs">{s.capability}</td>
-                  <td className="px-4 py-2.5 mono text-xs text-ink-400">
+                  <td className="px-4 py-2.5 mono text-xs text-ink-500">
                     {s.upstream_model ?? '—'}
                   </td>
                   <td className="px-4 py-2.5 text-xs">{s.billing_unit}</td>
@@ -185,7 +185,7 @@ export default function SKUsPage() {
                   <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => setPricingFor(s)}
-                      className="rounded-md border border-ink-600 px-2 py-0.5 text-[11px] text-ink-200 hover:bg-ink-700"
+                      className="rounded-md border border-ink-300 px-2 py-0.5 text-[11px] text-ink-800 hover:bg-ink-100"
                     >
                       改价
                     </button>
@@ -242,7 +242,7 @@ function Filter({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -257,10 +257,10 @@ function Filter({
 function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'hidden'
-        ? 'bg-ink-700 text-ink-200'
-        : 'bg-rose-500/20 text-rose-300';
+        ? 'bg-ink-100 text-ink-800'
+        : 'bg-rose-100 text-rose-700';
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${tone}`}>{status}</span>;
 }
 
@@ -324,9 +324,9 @@ function PricingModal({
       <form
         onSubmit={onSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-2xl border border-ink-700 bg-ink-800 p-6"
+        className="w-full max-w-xl rounded-2xl border border-ink-200 bg-white p-6"
       >
-        <div className="mb-1 text-sm font-semibold text-white">改价 · {sku.display_name}</div>
+        <div className="mb-1 text-sm font-semibold text-ink-900">改价 · {sku.display_name}</div>
         <div className="mono mb-4 text-[11px] text-ink-500">
           {sku.id} · {sku.billing_unit}
         </div>
@@ -363,25 +363,25 @@ function PricingModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. 厂商降价 / 季度调整"
-              className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+              className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
             />
           </label>
         </div>
 
-        {error ? <div className="mt-3 text-sm text-rose-400">{error}</div> : null}
+        {error ? <div className="mt-3 text-sm text-rose-700">{error}</div> : null}
 
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-700"
+            className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 hover:bg-ink-100"
           >
             取消
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200 disabled:opacity-60"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-60"
           >
             {submitting ? '保存中…' : '应用新价'}
           </button>
@@ -407,9 +407,9 @@ function PriceField({
       <span className="text-xs text-ink-500">
         {label}
         {current !== undefined ? (
-          <span className="mono ml-2 text-[11px] text-ink-400">当前 {current.toFixed(4)}</span>
+          <span className="mono ml-2 text-[11px] text-ink-500">当前 {current.toFixed(4)}</span>
         ) : (
-          <span className="ml-2 text-[11px] text-ink-400">当前 —</span>
+          <span className="ml-2 text-[11px] text-ink-500">当前 —</span>
         )}
       </span>
       <input
@@ -418,7 +418,7 @@ function PriceField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="留空 = 不调整"
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );

@@ -79,15 +79,15 @@ export default function CredentialsPage() {
         subtitle='某主账号 × 某业务板块下的"应用"。凭据上挂服务绑定（调度行）。'
         actions={
           <Link
-            href="/admin/credentials/new"
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200"
+            href="/credentials/new"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50"
           >
             + 新增凭据
           </Link>
         }
       />
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-700 bg-ink-800 p-4 text-sm">
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
         <Filter
           label="厂商"
           value={filter.vendor}
@@ -135,7 +135,7 @@ export default function CredentialsPage() {
             value={filter.q}
             onChange={(e) => setFilter({ ...filter, q: e.target.value })}
             placeholder="凭据名"
-            className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+            className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
           />
         </label>
         <button
@@ -147,14 +147,14 @@ export default function CredentialsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">名称</th>
               <th className="px-4 py-2.5 text-left">业务板块</th>
@@ -167,7 +167,7 @@ export default function CredentialsPage() {
               <th></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-5 py-12 text-center text-ink-500">
@@ -191,7 +191,7 @@ export default function CredentialsPage() {
                     <td className="px-4 py-2.5 text-xs">
                       {acct?.name ?? <span className="text-ink-500">acct_{c.account_id}</span>}
                     </td>
-                    <td className="px-4 py-2.5 mono text-xs text-ink-400">cred_{c.id}</td>
+                    <td className="px-4 py-2.5 mono text-xs text-ink-500">cred_{c.id}</td>
                     <td className="px-4 py-2.5 text-xs text-ink-500">{c.env}</td>
                     <td className="px-4 py-2.5 text-right">{c.health_score}</td>
                     <td className="px-4 py-2.5">
@@ -203,14 +203,14 @@ export default function CredentialsPage() {
                     <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap">
                       <Link
                         href={`/admin/credentials/${c.id}`}
-                        className="text-ink-200 hover:underline"
+                        className="text-ink-800 hover:underline"
                       >
                         详情
                       </Link>
                       {c.status !== 'archived' ? (
                         <button
                           onClick={() => archive(c)}
-                          className="ml-3 text-rose-400 hover:underline"
+                          className="ml-3 text-rose-700 hover:underline"
                         >
                           归档
                         </button>
@@ -244,7 +244,7 @@ function Filter({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -259,12 +259,12 @@ function Filter({
 function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'cooldown' || status === 'rate_limited'
-        ? 'bg-amber-500/20 text-amber-300'
+        ? 'bg-amber-100 text-amber-700'
         : status === 'banned' || status === 'archived'
-          ? 'bg-rose-500/20 text-rose-300'
-          : 'bg-ink-700 text-ink-200';
+          ? 'bg-rose-100 text-rose-700'
+          : 'bg-ink-100 text-ink-800';
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${tone}`}>{status}</span>;
 }
 

@@ -86,10 +86,10 @@ export default function CreateSKUForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+    <form onSubmit={onSubmit} className="rounded-2xl border border-ink-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-white">新增平台 SKU</div>
-        <button type="button" onClick={onClose} className="text-xs text-ink-500 hover:text-ink-200">
+        <div className="text-sm font-semibold text-ink-900">新增平台 SKU</div>
+        <button type="button" onClick={onClose} className="text-xs text-ink-500 hover:text-ink-800">
           关闭
         </button>
       </div>
@@ -183,20 +183,20 @@ export default function CreateSKUForm({
         />
       </div>
 
-      {error ? <div className="mt-3 text-sm text-rose-400">{error}</div> : null}
+      {error ? <div className="mt-3 text-sm text-rose-700">{error}</div> : null}
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-700"
+          className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 hover:bg-ink-100"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={submitting || !form.id || !form.display_name || !capability}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200 disabled:opacity-60"
+          className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-60"
         >
           {submitting ? '创建中…' : '创建 SKU'}
         </button>
@@ -225,7 +225,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500 ${
+        className={`mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 ${
           mono ? 'mono' : ''
         }`}
       />
@@ -249,7 +249,7 @@ function NumberField({
         type="number"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );
@@ -275,7 +275,7 @@ function Select({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500 disabled:opacity-50"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 disabled:opacity-50"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

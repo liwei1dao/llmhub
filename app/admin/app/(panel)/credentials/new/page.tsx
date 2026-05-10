@@ -148,7 +148,7 @@ export default function NewCredentialWizardPage() {
       />
 
       {loadErr ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {loadErr}
         </div>
       ) : null}
@@ -169,13 +169,13 @@ export default function NewCredentialWizardPage() {
                 s.n === step
                   ? 'bg-brand-600 text-white'
                   : s.n < step
-                    ? 'bg-ink-700 text-ink-200 cursor-pointer hover:bg-ink-600'
-                    : 'bg-ink-700 text-ink-500'
+                    ? 'bg-ink-100 text-ink-800 cursor-pointer hover:bg-ink-100'
+                    : 'bg-ink-100 text-ink-500'
               }`}
             >
               {s.label}
             </button>
-            {i < arr.length - 1 ? <div className="flex-1 border-t border-dashed border-ink-700 w-12" /> : null}
+            {i < arr.length - 1 ? <div className="flex-1 border-t border-dashed border-ink-200 w-12" /> : null}
           </div>
         ))}
       </ol>
@@ -230,17 +230,17 @@ export default function NewCredentialWizardPage() {
       ) : null}
 
       {submitErr ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {submitErr}
         </div>
       ) : null}
 
-      <div className="flex justify-between pt-4 border-t border-ink-700">
+      <div className="flex justify-between pt-4 border-t border-ink-200">
         <button
           type="button"
           onClick={() => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))}
           disabled={step === 1}
-          className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 disabled:opacity-50"
+          className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 disabled:opacity-50"
         >
           ← 上一步
         </button>
@@ -249,7 +249,7 @@ export default function NewCredentialWizardPage() {
             type="button"
             onClick={() => setStep((s) => (s + 1) as Step)}
             disabled={!nextable()}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 disabled:opacity-50"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-50"
           >
             下一步 →
           </button>
@@ -286,12 +286,12 @@ function Step1({
   for (const a of accounts) (byVendor[a.vendor_id] ??= []).push(a);
 
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5 space-y-4">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5 space-y-4">
       <div className="text-sm text-ink-500">
         先选主账号——主账号的厂商决定了下一步能选哪些板块。
       </div>
       {Object.keys(byVendor).length === 0 ? (
-        <div className="rounded-lg border border-dashed border-ink-700 bg-ink-900 p-4 text-sm text-ink-500">
+        <div className="rounded-lg border border-dashed border-ink-200 bg-white p-4 text-sm text-ink-500">
           没有可用主账号。请先到「主账号管理」创建一个。
         </div>
       ) : null}
@@ -308,8 +308,8 @@ function Step1({
                   key={a.id}
                   className={`cursor-pointer rounded-lg border p-3 ${
                     a.id === accountID
-                      ? 'border-brand-500 ring-2 ring-brand-500/30 bg-ink-900'
-                      : 'border-ink-700 bg-ink-900 hover:border-ink-500'
+                      ? 'border-brand-500 ring-2 ring-brand-500/30 bg-white'
+                      : 'border-ink-200 bg-white hover:border-ink-500'
                   }`}
                 >
                   <input
@@ -348,7 +348,7 @@ function Step2({
   onPick: (id: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5">
       <div className="text-sm text-ink-500 mb-3">
         已选主账号厂商 <span className="mono text-brand-200">{vendor.id}</span> · 仅展示该厂商的业务板块。
       </div>
@@ -358,8 +358,8 @@ function Step2({
             key={p.id}
             className={`cursor-pointer rounded-lg border p-4 ${
               p.id === productID
-                ? 'border-brand-500 ring-2 ring-brand-500/30 bg-ink-900'
-                : 'border-ink-700 bg-ink-900 hover:border-ink-500'
+                ? 'border-brand-500 ring-2 ring-brand-500/30 bg-white'
+                : 'border-ink-200 bg-white hover:border-ink-500'
             }`}
           >
             <input
@@ -403,7 +403,7 @@ function Step3({
   onChangeField: (k: string, v: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5 space-y-4">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5 space-y-4">
       <div className="text-sm text-ink-500">
         填写 <span className="mono text-brand-200">{product.id}</span> 板块的凭据字段（schema 由代码常量决定）。
       </div>
@@ -414,7 +414,7 @@ function Step3({
           <select
             value={env}
             onChange={(e) => onChangeEnv(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
           >
             <option value="production">production</option>
             <option value="staging">staging</option>
@@ -450,13 +450,13 @@ function Step4({
   }
 
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5">
       <div className="text-sm text-ink-500 mb-3">
         勾选要绑定的服务并设置 tier / QPS / 配额。
       </div>
-      <div className="overflow-hidden rounded-xl border border-ink-700">
+      <div className="overflow-hidden rounded-xl border border-ink-200">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-3 py-2 w-10"></th>
               <th className="px-3 py-2 text-left">能力</th>
@@ -466,7 +466,7 @@ function Step4({
               <th className="px-3 py-2 text-right">cost_basis</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {bindings.map((b, idx) => {
               const cap = caps.find((c) => c.id === b.capability);
               return (
@@ -487,7 +487,7 @@ function Step4({
                       disabled={!b.selected}
                       value={b.tier}
                       onChange={(e) => update(idx, { tier: e.target.value })}
-                      className="rounded border border-ink-700 bg-ink-900 px-2 py-1 text-xs disabled:opacity-50"
+                      className="rounded border border-ink-200 bg-white px-2 py-1 text-xs disabled:opacity-50"
                     >
                       <option>free</option>
                       <option>pro</option>
@@ -500,7 +500,7 @@ function Step4({
                       disabled={!b.selected}
                       value={b.qps_limit}
                       onChange={(e) => update(idx, { qps_limit: Number(e.target.value) })}
-                      className="w-20 rounded border border-ink-700 bg-ink-900 px-2 py-1 text-xs text-right disabled:opacity-50"
+                      className="w-20 rounded border border-ink-200 bg-white px-2 py-1 text-xs text-right disabled:opacity-50"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -509,7 +509,7 @@ function Step4({
                       disabled={!b.selected}
                       value={b.daily_limit_cents}
                       onChange={(e) => update(idx, { daily_limit_cents: Number(e.target.value) })}
-                      className="w-28 rounded border border-ink-700 bg-ink-900 px-2 py-1 text-xs text-right disabled:opacity-50"
+                      className="w-28 rounded border border-ink-200 bg-white px-2 py-1 text-xs text-right disabled:opacity-50"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -519,7 +519,7 @@ function Step4({
                       disabled={!b.selected}
                       value={b.cost_basis_cents}
                       onChange={(e) => update(idx, { cost_basis_cents: Number(e.target.value) })}
-                      className="w-20 rounded border border-ink-700 bg-ink-900 px-2 py-1 text-xs text-right disabled:opacity-50"
+                      className="w-20 rounded border border-ink-200 bg-white px-2 py-1 text-xs text-right disabled:opacity-50"
                     />
                   </td>
                 </tr>
@@ -547,19 +547,19 @@ function Step5({
   bindings: BindingDraft[];
 }) {
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5 space-y-4">
+    <div className="rounded-2xl border border-ink-200 bg-white p-5 space-y-4">
       <div className="text-sm font-medium">提交摘要</div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3 text-sm">
         <Info label="主账号" value={`🪪 ${account.name} (acct_${account.id})`} />
         <Info label="业务板块" value={`${product.id} · ${product.name}`} />
         <Info label="将创建" value={`1 凭据 + ${bindings.length} 服务绑定（同事务）`} />
       </div>
-      <div className="rounded-xl border border-ink-700 overflow-hidden">
-        <div className="px-3 py-2 bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+      <div className="rounded-xl border border-ink-200 overflow-hidden">
+        <div className="px-3 py-2 bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
           凭据
         </div>
         <table className="w-full text-sm">
-          <tbody className="divide-y divide-ink-700 bg-ink-800">
+          <tbody className="divide-y divide-ink-200 bg-white">
             <tr>
               <td className="px-3 py-2 w-32 text-xs text-ink-500">名称</td>
               <td className="px-3 py-2">{name}</td>
@@ -570,11 +570,11 @@ function Step5({
             </tr>
           </tbody>
         </table>
-        <div className="px-3 py-2 bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500 border-t border-ink-700">
+        <div className="px-3 py-2 bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500 border-t border-ink-200">
           服务绑定（{bindings.length}）
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-3 py-2 text-left">能力</th>
               <th className="px-3 py-2 text-left">tier</th>
@@ -583,7 +583,7 @@ function Step5({
               <th className="px-3 py-2 text-right">cost</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700 bg-ink-800">
+          <tbody className="divide-y divide-ink-200 bg-white">
             {bindings.map((b) => (
               <tr key={b.capability}>
                 <td className="px-3 py-2 mono">{b.capability}</td>
@@ -602,7 +602,7 @@ function Step5({
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-3">
+    <div className="rounded-lg border border-ink-200 bg-white p-3">
       <div className="text-xs text-ink-500">{label}</div>
       <div className="mt-1 text-sm">{value}</div>
     </div>
@@ -630,7 +630,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );

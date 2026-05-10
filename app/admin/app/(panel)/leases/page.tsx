@@ -71,7 +71,7 @@ export default function LeasesPage() {
         subtitle="SDK 进程拿着真上游凭据的发放记录。撤销后该 lease_id 立即失效，SDK 下次调用会重新申请。"
       />
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-700 bg-ink-800 p-4 text-sm">
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
         <FilterInput
           label="user_id"
           value={filter.user_id}
@@ -116,14 +116,14 @@ export default function LeasesPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">Lease</th>
               <th className="px-4 py-2.5 text-left">用户</th>
@@ -136,7 +136,7 @@ export default function LeasesPage() {
               <th className="px-4 py-2.5 text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-5 py-12 text-center text-ink-500">
@@ -147,19 +147,19 @@ export default function LeasesPage() {
               rows.map((l) => (
                 <tr key={l.lease_id}>
                   <td className="px-4 py-2.5">
-                    <div className="mono text-[11px] text-ink-300">{l.lease_id.slice(0, 8)}…</div>
+                    <div className="mono text-[11px] text-ink-500">{l.lease_id.slice(0, 8)}…</div>
                     {l.client_ip ? (
                       <div className="mono text-[10px] text-ink-500">{l.client_ip}</div>
                     ) : null}
                   </td>
                   <td className="px-4 py-2.5 mono text-xs">
-                    <Link href={`/admin/users/${l.user_id}`} className="text-brand-400 hover:underline">
+                    <Link href={`/admin/users/${l.user_id}`} className="text-brand-600 hover:underline">
                       #{l.user_id}
                     </Link>
                   </td>
                   <td className="px-4 py-2.5 mono text-xs">{l.sku_id}</td>
                   <td className="px-4 py-2.5 mono text-xs">
-                    <span className="text-ink-400">b{l.binding_id}</span>
+                    <span className="text-ink-500">b{l.binding_id}</span>
                     <span className="ml-1 text-[10px] text-ink-500">/c{l.credential_id}</span>
                   </td>
                   <td className="px-4 py-2.5">
@@ -177,7 +177,7 @@ export default function LeasesPage() {
                     {l.status === 'active' ? (
                       <button
                         onClick={() => onRevoke(l)}
-                        className="rounded-md border border-rose-800 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-950"
+                        className="rounded-md border border-rose-300 px-2 py-0.5 text-[11px] text-rose-700 hover:bg-rose-50"
                       >
                         撤销
                       </button>
@@ -213,7 +213,7 @@ function FilterInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );
@@ -236,7 +236,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -253,10 +253,10 @@ function LeaseStatusPill({ status, expiresAt }: { status: string; expiresAt: str
   const effective = status === 'active' && !expired ? 'active' : status === 'active' && expired ? 'expired_soft' : status;
   const tone =
     effective === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : effective === 'revoked'
-        ? 'bg-rose-500/20 text-rose-300'
-        : 'bg-ink-700 text-ink-300';
+        ? 'bg-rose-100 text-rose-700'
+        : 'bg-ink-100 text-ink-500';
   const label = effective === 'expired_soft' ? '已过期' : effective;
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] ${tone}`}>{label}</span>;
 }

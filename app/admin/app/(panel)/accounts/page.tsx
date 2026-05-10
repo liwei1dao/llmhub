@@ -60,7 +60,7 @@ export default function AccountsPage() {
         actions={
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50"
           >
             {showForm ? '收起' : '+ 新增主账号'}
           </button>
@@ -78,7 +78,7 @@ export default function AccountsPage() {
         />
       ) : null}
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-700 bg-ink-800 p-4 text-sm">
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
         <Filter
           label="厂商"
           value={filter.vendor}
@@ -105,7 +105,7 @@ export default function AccountsPage() {
             value={filter.q}
             onChange={(e) => setFilter({ ...filter, q: e.target.value })}
             placeholder="名称 / 主体"
-            className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+            className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
           />
         </label>
         <button
@@ -117,14 +117,14 @@ export default function AccountsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800">
+      <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">名称</th>
               <th className="px-4 py-2.5 text-left">厂商</th>
@@ -136,7 +136,7 @@ export default function AccountsPage() {
               <th></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-5 py-12 text-center text-ink-500">
@@ -145,16 +145,16 @@ export default function AccountsPage() {
               </tr>
             ) : (
               rows.map((a) => (
-                <tr key={a.id} className="hover:bg-ink-900/30">
+                <tr key={a.id} className="hover:bg-ink-50">
                   <td className="px-4 py-2.5">
-                    <Link href={`/accounts/${a.id}`} className="text-ink-200 hover:text-brand-300">
+                    <Link href={`/accounts/${a.id}`} className="text-ink-800 hover:text-brand-600">
                       🪪 {a.name}
                     </Link>
                   </td>
                   <td className="px-4 py-2.5 text-xs text-ink-500">{a.vendor_id}</td>
-                  <td className="px-4 py-2.5 mono text-xs text-ink-400">acct_{a.id}</td>
+                  <td className="px-4 py-2.5 mono text-xs text-ink-500">acct_{a.id}</td>
                   <td className="px-4 py-2.5 text-xs">{a.entity ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-emerald-300">
+                  <td className="px-4 py-2.5 text-right text-emerald-700">
                     {a.last_balance_cents != null
                       ? fmtCents(a.last_balance_cents)
                       : <span className="text-ink-500">—</span>}
@@ -166,7 +166,7 @@ export default function AccountsPage() {
                   <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap">
                     <button
                       onClick={() => archive(a.id, a.name)}
-                      className="text-rose-400 hover:underline"
+                      className="text-rose-700 hover:underline"
                     >
                       归档
                     </button>
@@ -198,7 +198,7 @@ function Filter({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 rounded-lg border border-ink-700 bg-ink-900 px-3 py-1.5 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 outline-none focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -213,9 +213,9 @@ function Filter({
 function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'frozen'
-        ? 'bg-amber-500/20 text-amber-300'
-        : 'bg-rose-500/20 text-rose-300';
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-rose-100 text-rose-700';
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${tone}`}>{status}</span>;
 }

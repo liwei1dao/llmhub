@@ -94,7 +94,7 @@ export default function UserDetailPage() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
@@ -105,12 +105,12 @@ export default function UserDetailPage() {
       {wallet ? <WalletCard w={wallet} /> : null}
 
       {/* ── 订阅区块 ─────────────────────────────────────── */}
-      <div className="rounded-2xl border border-ink-700 bg-ink-800">
-        <div className="flex items-center justify-between border-b border-ink-700 px-5 py-3">
-          <div className="text-sm font-semibold text-white">订阅</div>
+      <div className="rounded-2xl border border-ink-200 bg-white">
+        <div className="flex items-center justify-between border-b border-ink-200 px-5 py-3">
+          <div className="text-sm font-semibold text-ink-900">订阅</div>
           <button
             onClick={() => setShowGrant((v) => !v)}
-            className="rounded-lg bg-white px-4 py-1.5 text-xs font-medium text-ink-900 hover:bg-ink-200"
+            className="rounded-lg border border-ink-200 bg-white px-4 py-1.5 text-xs font-medium text-ink-900 hover:bg-ink-50"
           >
             {showGrant ? '收起' : '+ 开订阅'}
           </button>
@@ -129,7 +129,7 @@ export default function UserDetailPage() {
         ) : null}
 
         <table className="w-full text-sm">
-          <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+          <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
             <tr>
               <th className="px-4 py-2.5 text-left">SKU</th>
               <th className="px-4 py-2.5 text-left">套餐</th>
@@ -140,7 +140,7 @@ export default function UserDetailPage() {
               <th className="px-4 py-2.5 text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink-700">
+          <tbody className="divide-y divide-ink-200">
             {subs.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-5 py-10 text-center text-ink-500">
@@ -151,7 +151,7 @@ export default function UserDetailPage() {
               subs.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-2.5">
-                    <div className="text-ink-200">{s.sku_id}</div>
+                    <div className="text-ink-800">{s.sku_id}</div>
                     {s.plan_name ? (
                       <div className="text-[11px] text-ink-500">{s.plan_name}</div>
                     ) : null}
@@ -170,20 +170,20 @@ export default function UserDetailPage() {
                       <button
                         onClick={() => onAddQuota(s)}
                         disabled={s.status !== 'active'}
-                        className="rounded-md border border-ink-600 px-2 py-0.5 text-[11px] text-ink-200 hover:bg-ink-700 disabled:opacity-40"
+                        className="rounded-md border border-ink-300 px-2 py-0.5 text-[11px] text-ink-800 hover:bg-ink-100 disabled:opacity-40"
                       >
                         加配额
                       </button>
                       <button
                         onClick={() => onToggleStatus(s)}
-                        className="rounded-md border border-ink-600 px-2 py-0.5 text-[11px] text-ink-200 hover:bg-ink-700"
+                        className="rounded-md border border-ink-300 px-2 py-0.5 text-[11px] text-ink-800 hover:bg-ink-100"
                       >
                         {s.status === 'active' ? '暂停' : '恢复'}
                       </button>
                       <button
                         onClick={() => onCancel(s)}
                         disabled={s.status === 'cancelled'}
-                        className="rounded-md border border-rose-800 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-950 disabled:opacity-40"
+                        className="rounded-md border border-rose-300 px-2 py-0.5 text-[11px] text-rose-700 hover:bg-rose-50 disabled:opacity-40"
                       >
                         取消
                       </button>
@@ -201,7 +201,7 @@ export default function UserDetailPage() {
 
 function UserCard({ u }: { u: AdminUserDetail }) {
   return (
-    <div className="grid grid-cols-2 gap-4 rounded-2xl border border-ink-700 bg-ink-800 p-5 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 rounded-2xl border border-ink-200 bg-white p-5 md:grid-cols-4">
       <Field label="状态" value={u.status} />
       <Field label="风险分" value={String(u.risk_score)} />
       <Field label="QPS 上限" value={String(u.qps_limit)} />
@@ -218,7 +218,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-[11px] text-ink-500">{label}</div>
-      <div className="text-sm text-ink-200">{value}</div>
+      <div className="text-sm text-ink-800">{value}</div>
     </div>
   );
 }
@@ -226,16 +226,16 @@ function Field({ label, value }: { label: string; value: string }) {
 function WalletCard({ w }: { w: AdminUserWallet }) {
   if (!w.account_exists) {
     return (
-      <div className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
-        <div className="text-sm font-semibold text-white mb-2">💰 钱包</div>
+      <div className="rounded-2xl border border-ink-200 bg-white p-5">
+        <div className="text-sm font-semibold text-ink-900 mb-2">💰 钱包</div>
         <div className="text-xs text-ink-500">用户尚未发起过任何充值，钱包账户未创建。</div>
       </div>
     );
   }
   const currency = w.currency || 'CNY';
   return (
-    <div className="rounded-2xl border border-ink-700 bg-ink-800">
-      <div className="border-b border-ink-700 px-5 py-3 text-sm font-semibold text-white">
+    <div className="rounded-2xl border border-ink-200 bg-white">
+      <div className="border-b border-ink-200 px-5 py-3 text-sm font-semibold text-ink-900">
         💰 钱包 · 消费（最近 30 日）
       </div>
       <div className="grid grid-cols-2 gap-4 px-5 py-4 md:grid-cols-5">
@@ -251,7 +251,7 @@ function WalletCard({ w }: { w: AdminUserWallet }) {
       </div>
 
       {/* 最近充值 */}
-      <div className="border-t border-ink-700">
+      <div className="border-t border-ink-200">
         <div className="px-5 py-2.5 text-xs uppercase tracking-wider text-ink-500">
           最近充值（{w.recharges.length}）
         </div>
@@ -259,7 +259,7 @@ function WalletCard({ w }: { w: AdminUserWallet }) {
           <div className="px-5 pb-4 pt-1 text-sm text-ink-500">—</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-ink-900/40 text-[11px] uppercase tracking-wider text-ink-500">
+            <thead className="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
               <tr>
                 <th className="px-4 py-2 text-left">订单号</th>
                 <th className="px-4 py-2 text-left">渠道</th>
@@ -269,10 +269,10 @@ function WalletCard({ w }: { w: AdminUserWallet }) {
                 <th className="px-4 py-2 text-left">创建</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ink-700">
+            <tbody className="divide-y divide-ink-200">
               {w.recharges.map((r) => (
                 <tr key={r.order_no}>
-                  <td className="px-4 py-2 mono text-xs text-ink-300">{r.order_no}</td>
+                  <td className="px-4 py-2 mono text-xs text-ink-500">{r.order_no}</td>
                   <td className="px-4 py-2 text-xs">{r.channel}</td>
                   <td className="px-4 py-2 text-right tabular-nums">
                     {fmtCents(r.amount_cents, currency)}
@@ -305,7 +305,7 @@ function Stat({
   sub?: string;
   tone?: 'emerald';
 }) {
-  const valueCls = tone === 'emerald' ? 'text-emerald-300' : 'text-ink-100';
+  const valueCls = tone === 'emerald' ? 'text-emerald-700' : 'text-ink-900';
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wider text-ink-500">{label}</div>
@@ -318,12 +318,12 @@ function Stat({
 function RechargeStatusPill({ status }: { status: string }) {
   const tone =
     status === 'paid'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'pending'
-        ? 'bg-amber-500/20 text-amber-300'
+        ? 'bg-amber-100 text-amber-700'
         : status === 'failed' || status === 'cancelled' || status === 'refunded'
-          ? 'bg-rose-500/20 text-rose-300'
-          : 'bg-ink-700 text-ink-300';
+          ? 'bg-rose-100 text-rose-700'
+          : 'bg-ink-100 text-ink-500';
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] ${tone}`}>{status}</span>
   );
@@ -332,12 +332,12 @@ function RechargeStatusPill({ status }: { status: string }) {
 function SubStatusPill({ status }: { status: string }) {
   const tone =
     status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
+      ? 'bg-emerald-100 text-emerald-700'
       : status === 'suspended'
-        ? 'bg-amber-500/20 text-amber-300'
+        ? 'bg-amber-100 text-amber-700'
         : status === 'cancelled'
-          ? 'bg-rose-500/20 text-rose-300'
-          : 'bg-ink-700 text-ink-200';
+          ? 'bg-rose-100 text-rose-700'
+          : 'bg-ink-100 text-ink-800';
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${tone}`}>{status}</span>;
 }
 
@@ -389,7 +389,7 @@ function GrantForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="border-b border-ink-700 bg-ink-900/30 p-5">
+    <form onSubmit={onSubmit} className="border-b border-ink-200 bg-ink-50 p-5">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Select
           label="SKU *"
@@ -437,7 +437,7 @@ function GrantForm({
           onChange={(v) => setForm({ ...form, period_end: v })}
           placeholder="2026-12-01T00:00:00Z"
         />
-        <label className="flex items-center gap-2 text-sm text-ink-200">
+        <label className="flex items-center gap-2 text-sm text-ink-800">
           <input
             type="checkbox"
             checked={form.auto_renew ?? false}
@@ -447,20 +447,20 @@ function GrantForm({
         </label>
       </div>
 
-      {error ? <div className="mt-3 text-sm text-rose-400">{error}</div> : null}
+      {error ? <div className="mt-3 text-sm text-rose-700">{error}</div> : null}
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-700"
+          className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 hover:bg-ink-100"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={submitting || !form.sku_id}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200 disabled:opacity-60"
+          className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-60"
         >
           {submitting ? '创建中…' : '开订阅'}
         </button>
@@ -487,7 +487,7 @@ function Field2({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );
@@ -509,7 +509,7 @@ function NumberField2({
         type="number"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );
@@ -532,7 +532,7 @@ function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

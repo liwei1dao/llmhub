@@ -46,14 +46,14 @@ export default function CreateMasterForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-2xl border border-ink-700 bg-ink-800 p-5"
+      className="rounded-2xl border border-ink-200 bg-white p-5"
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-white">新增主账号</div>
+        <div className="text-sm font-semibold text-ink-900">新增主账号</div>
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-ink-500 hover:text-ink-200"
+          className="text-xs text-ink-500 hover:text-ink-800"
         >
           关闭
         </button>
@@ -67,8 +67,8 @@ export default function CreateMasterForm({
               key={v.id}
               className={`cursor-pointer rounded-lg border p-3 text-center text-sm ${
                 v.id === vendorID
-                  ? 'border-brand-500 ring-2 ring-brand-500/30 bg-ink-900'
-                  : 'border-ink-700 bg-ink-900 hover:border-ink-500'
+                  ? 'border-brand-500 ring-2 ring-brand-500/30 bg-white'
+                  : 'border-ink-200 bg-white hover:border-ink-500'
               }`}
             >
               <input
@@ -110,20 +110,20 @@ export default function CreateMasterForm({
         ))}
       </div>
 
-      {error ? <div className="mt-3 text-sm text-rose-400">{error}</div> : null}
+      {error ? <div className="mt-3 text-sm text-rose-700">{error}</div> : null}
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-700"
+          className="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 hover:bg-ink-100"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={submitting || !name || !vendorID}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-200 disabled:opacity-60"
+          className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50 disabled:opacity-60"
         >
           {submitting ? '创建中…' : '创建主账号'}
         </button>
@@ -153,7 +153,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+        className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
       />
     </label>
   );

@@ -36,23 +36,23 @@ export default function CapabilitiesPage() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-950 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {cats.map((cat) => (
-          <div key={cat.id} className="rounded-2xl border border-ink-700 bg-ink-800 p-5">
+          <div key={cat.id} className="rounded-2xl border border-ink-200 bg-white p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="text-base font-semibold">{cat.name}</div>
               <span className="text-xs text-ink-500 mono">{cat.id}</span>
             </div>
-            <ul className="divide-y divide-ink-700 text-sm">
+            <ul className="divide-y divide-ink-200 text-sm">
               {(byCat[cat.id] ?? []).map((c) => (
                 <li key={c.id} className="flex items-center justify-between py-2">
                   <div>
-                    <span className="mono text-ink-200">{c.id}</span>
+                    <span className="mono text-ink-800">{c.id}</span>
                     <span className="text-ink-500"> · {c.display_name}</span>
                   </div>
                   <span className="text-xs text-ink-500">{c.billing_unit}</span>
