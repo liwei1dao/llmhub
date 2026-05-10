@@ -33,6 +33,8 @@ import (
 
 	"github.com/llmhub/llmhub/internal/account"
 	"github.com/llmhub/llmhub/internal/admin"
+	"github.com/llmhub/llmhub/internal/adminauth"
+	adminauthrepo "github.com/llmhub/llmhub/internal/adminauth/repo"
 	"github.com/llmhub/llmhub/internal/audit"
 	"github.com/llmhub/llmhub/internal/catalog"
 	catalogrepo "github.com/llmhub/llmhub/internal/catalog/repo"
@@ -95,12 +97,23 @@ func main() {
 		}
 	}
 
-	// ---- admin server ----
-	adminToken := os.Getenv("LLMHUB_ADMIN_TOKEN")
-	if adminToken == "" {
-		logger.Warn("admin token not set — /api/admin/* routes will reject all requests")
+	// ---- admin auth (后台管理员独立用户体系) ----
+	adminAuthRepo := adminauthrepo.New(dbpool)
+	adminAuthSvc := adminauth.New(adminAuthRepo)
+	if bootAcct, bootPass := os.Getenv("LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT"), os.Getenv("LLMHUB_ADMIN_BOOTSTRAP_PASSWORD"); bootAcct != "" && bootPass != "" {
+		bootName := os.Getenv("LLMHUB_ADMIN_BOOTSTRAP_NAME")
+		if err := adminAuthSvc.EnsureBootstrap(ctx, bootAcct, bootPass, bootName); err != nil {
+			logger.Warn("admin bootstrap skipped", "err", err)
+		} else {
+			logger.Info("admin bootstrap checked", "account", bootAcct)
+		}
+	} else {
+		logger.Warn("LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT/PASSWORD not set — first admin must be inserted manually")
 	}
-	adminSrv := admin.New(logger, poolrepo.New(dbpool), adminToken).
+
+	// ---- admin server ----
+	adminSrv := admin.New(logger, poolrepo.New(dbpool)).
+		WithAuth(adminAuthSvc).
 		WithIAM(iamrepo.New(dbpool)).
 		WithCatalog(catalogrepo.New(dbpool)).
 		WithMetering(meterRepo).

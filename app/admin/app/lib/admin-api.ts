@@ -1,8 +1,10 @@
-// Admin API client. Talks to the same account-service binary that hosts
-// /api/admin/* routes guarded by the X-Admin-Token shared secret.
+// Admin API client. Talks to the account-service binary that hosts
+// /api/admin/* routes. Authentication: 账号+密码 → POST /auth/login →
+// 返回 token，后续请求带 X-Admin-Token: <token>。token 来自服务端
+// adminauth.sessions（独立于终端用户 iam.sessions）。
 //
-// The token is held in localStorage on the operator's machine. In M9
-// this becomes a session-cookie + RBAC scheme.
+// token 仅放 localStorage；不放 cookie 是为了让 admin 站可以独立部署
+// 在不同域名下而不和用户站 cookie 冲突。
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8081';
 const TOKEN_KEY = 'llmhub_admin_token';
@@ -17,15 +19,17 @@ export function setToken(t: string) {
   else window.localStorage.removeItem(TOKEN_KEY);
 }
 
-async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = getToken();
-  if (!token) throw new Error('未登录：请先在登录页输入管理员 token');
+async function rawCall<T>(method: string, path: string, body?: unknown, opts?: { withToken?: boolean }): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (opts?.withToken !== false) {
+    const token = getToken();
+    if (!token) throw new Error('未登录');
+    headers['X-Admin-Token'] = token;
+  }
+  if (body) headers['Content-Type'] = 'application/json';
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: {
-      'X-Admin-Token': token,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   });
@@ -35,6 +39,54 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  return rawCall<T>(method, path, body, { withToken: true });
+}
+
+// ---- auth ----
+
+export type AdminMe = {
+  id: number;
+  account: string;
+  display_name?: string | null;
+  status: string;
+  last_login_at?: string | null;
+  created_at: string;
+};
+
+export type LoginResponse = {
+  token: string;
+  expires_at: string;
+  admin: { id: number; account: string; display_name?: string | null };
+};
+
+// login posts account+password to /api/admin/auth/login and stores the
+// returned session token. Returns the response so callers can show the
+// resolved admin profile immediately.
+export async function login(account: string, password: string): Promise<LoginResponse> {
+  const res = await rawCall<LoginResponse>('POST', '/api/admin/auth/login', { account, password }, { withToken: false });
+  setToken(res.token);
+  return res;
+}
+
+// logout revokes the current session server-side and clears the token.
+// Best-effort: even if the server call fails, we still drop the token
+// on this client so the operator can re-login.
+export async function logout(): Promise<void> {
+  try {
+    await call('POST', '/api/admin/auth/logout');
+  } catch {
+    // ignore — server may already consider the token invalid
+  }
+  setToken('');
+}
+
+// me returns the currently logged-in admin or throws if the token is
+// invalid/expired. Used by RequireToken to validate stale localStorage.
+export async function me(): Promise<AdminMe> {
+  return call<AdminMe>('GET', '/api/admin/auth/me');
 }
 
 export const api = {

@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LLMHub Admin · 亮色主题预览</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: {
+            50:  '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
+            400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151',
+            800: '#1f2937', 900: '#111827',
+          },
+          brand: {
+            50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+            400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+          },
+        },
+        fontFamily: { sans: ['Inter','PingFang SC','Microsoft YaHei','system-ui','sans-serif'] },
+      },
+    },
+  };
+</script>
+<style>
+  body { background:#f9fafb; color:#111827; font-family: Inter,'PingFang SC','Microsoft YaHei',system-ui,sans-serif; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+
+  /* tab radios */
+  input[name=screen] { display:none; }
+  .pane { display:none; }
+  #s-login:checked    ~ #stage > #p-login,
+  #s-dash:checked     ~ #stage > #p-dash,
+  #s-accts:checked    ~ #stage > #p-accts,
+  #s-newacct:checked  ~ #stage > #p-newacct,
+  #s-acct:checked     ~ #stage > #p-acct,
+  #s-creds:checked    ~ #stage > #p-creds,
+  #s-user:checked     ~ #stage > #p-user
+    { display:block; }
+  #s-login:checked   ~ .tabs label[for=s-login],
+  #s-dash:checked    ~ .tabs label[for=s-dash],
+  #s-accts:checked   ~ .tabs label[for=s-accts],
+  #s-newacct:checked ~ .tabs label[for=s-newacct],
+  #s-acct:checked    ~ .tabs label[for=s-acct],
+  #s-creds:checked   ~ .tabs label[for=s-creds],
+  #s-user:checked    ~ .tabs label[for=s-user]
+    { background:#111827; color:#fff; border-color:#111827; }
+
+  /* fake scrollbar look for table rows */
+  .row-h:hover { background:#f9fafb; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ==========  顶部说明  ========== -->
+<header class="border-b border-ink-200 bg-white">
+  <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+      <div>
+        <div class="text-sm font-semibold tracking-tight">LLMHub Admin · 亮色主题预览</div>
+        <div class="text-xs text-ink-500">静态 mockup，与 <span class="mono">/app/admin/</span> 真实组件 1:1 对齐</div>
+      </div>
+    </div>
+    <a href="redesign-pool.html" class="text-xs text-ink-500 hover:text-ink-800 underline">回到 v2 全后台预览（暗色）</a>
+  </div>
+</header>
+
+<input type="radio" name="screen" id="s-login" />
+<input type="radio" name="screen" id="s-dash" />
+<input type="radio" name="screen" id="s-accts" />
+<input type="radio" name="screen" id="s-newacct" checked />
+<input type="radio" name="screen" id="s-acct" />
+<input type="radio" name="screen" id="s-creds" />
+<input type="radio" name="screen" id="s-user" />
+
+<div class="tabs sticky top-0 z-10 border-b border-ink-200 bg-white">
+  <div class="mx-auto max-w-7xl px-6 py-2 flex flex-wrap gap-2 text-xs">
+    <label for="s-login" class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">登录</label>
+    <label for="s-dash"  class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">仪表盘</label>
+    <label for="s-accts"  class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">账号管理</label>
+    <label for="s-newacct" class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">新增账号</label>
+    <label for="s-acct"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">账号详情</label>
+    <label for="s-creds" class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">凭据管理</label>
+    <label for="s-user"  class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1 hover:bg-ink-50">用户详情</label>
+  </div>
+</div>
+
+<div id="stage" class="mx-auto max-w-7xl px-6 py-6">
+
+<!-- ============================  LOGIN  ============================ -->
+<div id="p-login" class="pane">
+  <div class="grid min-h-[600px] place-items-center">
+    <div class="w-full max-w-md rounded-2xl border border-ink-200 bg-white p-8 shadow-xl">
+      <div class="mb-6 flex items-center gap-2">
+        <span class="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 font-semibold text-white">A</span>
+        <span class="text-xl font-semibold tracking-tight text-ink-900">LLMHub Admin</span>
+      </div>
+      <h1 class="text-lg font-semibold text-ink-900">后台登录</h1>
+      <p class="mt-1 text-sm text-ink-500">
+        管理员账号独立于终端用户。账号由首位 admin 通过 <code class="mono rounded bg-ink-100 px-1">LLMHUB_ADMIN_BOOTSTRAP_*</code> 环境变量种子化，后续可在后台扩展。
+      </p>
+      <form class="mt-5 space-y-4">
+        <label class="block">
+          <span class="text-xs text-ink-500">登录账号</span>
+          <input type="text" autocomplete="username" placeholder="管理员账号"
+                 class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-ink-500">登录密码</span>
+          <input type="password" autocomplete="current-password" placeholder="密码"
+                 class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        </label>
+        <button type="button" class="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">登录</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ====================  共享：sidebar shell  ===================== -->
+<template id="tpl-shell"></template>
+
+<!-- ============================  DASHBOARD  ======================== -->
+<div id="p-dash" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <!-- sidebar -->
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <a href="#" class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </a>
+      <nav class="space-y-4">
+        <div class="space-y-0.5">
+          <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">📊 仪表盘</a>
+        </div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <div class="space-y-0.5">
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🪪 账号管理</a>
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔑 凭据管理</a>
+          </div>
+        </div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">运营</div>
+          <div class="space-y-0.5">
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">👥 用户</a>
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔍 审计日志</a>
+          </div>
+        </div>
+      </nav>
+      <div class="mt-8 border-t border-ink-200 pt-4">
+        <button class="w-full rounded-lg px-3 py-2 text-left text-sm text-ink-500 hover:bg-ink-100 hover:text-ink-800">退出登录</button>
+      </div>
+    </aside>
+    <!-- main -->
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">仪表盘</h1>
+          <p class="mt-1 text-sm text-ink-500">核心运营指标 · 服务时间 2026-05-10 12:34:56 UTC</p>
+        </div>
+      </div>
+
+      <!-- 指标卡片 -->
+      <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">活 Lease</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-emerald-700">128</div>
+          <div class="text-xs text-ink-500 mt-1">总 4,217</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">活订阅</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-ink-900">63</div>
+          <div class="text-xs text-ink-500 mt-1">总 89</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">用户</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-ink-900">1,204</div>
+          <div class="text-xs text-ink-500 mt-1">活 API key 318</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">待确认充值</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-amber-700">3</div>
+          <div class="text-xs text-ink-500 mt-1">需 admin 处理</div>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">凭据·活</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-emerald-700">21</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">凭据·冷却</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-amber-700">2</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">今日调用</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-ink-900">8,672</div>
+          <div class="text-xs text-ink-500 mt-1">成功率 99.2%</div>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm text-ink-500">今日成功</div>
+          <div class="mt-2 text-3xl font-semibold tracking-tight text-brand-600">8,604</div>
+        </div>
+      </section>
+
+      <!-- 最近表 -->
+      <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="rounded-2xl border border-ink-200 bg-white">
+          <div class="flex items-center justify-between border-b border-ink-200 px-5 py-3 text-sm font-semibold text-ink-900">
+            最近主账号
+            <a class="text-xs text-brand-600 hover:underline">查看全部 →</a>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+              <tr><th class="px-4 py-2 text-left">名称</th><th class="px-4 py-2 text-left">厂商</th><th class="px-4 py-2 text-left">主体</th><th class="px-4 py-2 text-left">状态</th></tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-4 py-2.5">🪪 火山方舟·主账号</td><td class="px-4 py-2.5 text-xs text-ink-500 mono">volc</td><td class="px-4 py-2.5 text-xs">深圳希科</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+              <tr><td class="px-4 py-2.5">🪪 DeepSeek·生产</td><td class="px-4 py-2.5 text-xs text-ink-500 mono">deepseek</td><td class="px-4 py-2.5 text-xs">深圳希科</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+              <tr><td class="px-4 py-2.5">🪪 Anthropic·港主</td><td class="px-4 py-2.5 text-xs text-ink-500 mono">anthropic</td><td class="px-4 py-2.5 text-xs">HK Holdings</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">frozen</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rounded-2xl border border-ink-200 bg-white">
+          <div class="flex items-center justify-between border-b border-ink-200 px-5 py-3 text-sm font-semibold text-ink-900">
+            最近凭据
+            <a class="text-xs text-brand-600 hover:underline">查看全部 →</a>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+              <tr><th class="px-4 py-2 text-left">名称</th><th class="px-4 py-2 text-left">板块</th><th class="px-4 py-2 text-right">健康</th><th class="px-4 py-2 text-left">状态</th></tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-4 py-2.5">🔑 volc-prod-chat-01</td><td class="px-4 py-2.5 text-xs text-ink-500">chat</td><td class="px-4 py-2.5 text-right text-xs text-emerald-700 mono">100</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+              <tr><td class="px-4 py-2.5">🔑 deepseek-emb-01</td><td class="px-4 py-2.5 text-xs text-ink-500">embedding</td><td class="px-4 py-2.5 text-right text-xs text-emerald-700 mono">98</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+              <tr><td class="px-4 py-2.5">🔑 anthropic-claude-01</td><td class="px-4 py-2.5 text-xs text-ink-500">chat</td><td class="px-4 py-2.5 text-right text-xs text-amber-700 mono">62</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">cooldown</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ============================  ACCOUNTS LIST  ===================== -->
+<div id="p-accts" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <div class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </div>
+      <nav class="space-y-4">
+        <div class="space-y-0.5">
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">📊 仪表盘</a>
+        </div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <div class="space-y-0.5">
+            <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">🪪 账号管理</a>
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔑 凭据管理</a>
+          </div>
+        </div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">运营</div>
+          <div class="space-y-0.5">
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">👥 用户</a>
+            <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔍 审计日志</a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">账号管理</h1>
+          <p class="mt-1 text-sm text-ink-500">厂商主账号 = 行政/结算单元，承担余额查询和对账</p>
+        </div>
+        <button class="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50">+ 新增主账号</button>
+      </div>
+
+      <div class="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
+        <label class="flex flex-col">
+          <span class="text-xs text-ink-500">厂商</span>
+          <select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 focus:border-brand-500 outline-none">
+            <option>全部</option><option>Volcengine</option><option>DeepSeek</option>
+          </select>
+        </label>
+        <label class="flex flex-col">
+          <span class="text-xs text-ink-500">状态</span>
+          <select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 focus:border-brand-500 outline-none">
+            <option>全部</option><option>active</option><option>frozen</option><option>archived</option>
+          </select>
+        </label>
+        <label class="flex flex-1 min-w-[200px] flex-col">
+          <span class="text-xs text-ink-500">搜索</span>
+          <input placeholder="名称 / 主体" class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 focus:border-brand-500 outline-none" />
+        </label>
+        <button class="self-end rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700">查询</button>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+        <table class="w-full text-sm">
+          <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+            <tr>
+              <th class="px-4 py-2.5 text-left">名称</th>
+              <th class="px-4 py-2.5 text-left">厂商</th>
+              <th class="px-4 py-2.5 text-left">acct_id</th>
+              <th class="px-4 py-2.5 text-left">主体</th>
+              <th class="px-4 py-2.5 text-right">余额</th>
+              <th class="px-4 py-2.5 text-left">状态</th>
+              <th class="px-4 py-2.5 text-left">创建</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ink-200">
+            <tr class="row-h">
+              <td class="px-4 py-2.5"><a href="#" onclick="document.getElementById('s-acct').checked=true;return false;" class="text-ink-800 hover:text-brand-600">🪪 火山方舟·主账号</a></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500 mono">volc</td>
+              <td class="px-4 py-2.5 mono text-xs text-ink-500">acct_1001</td>
+              <td class="px-4 py-2.5 text-xs">深圳希科</td>
+              <td class="px-4 py-2.5 text-right text-emerald-700">¥ 8,432.20</td>
+              <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500">2026-04-12 11:20</td>
+              <td class="px-4 py-2.5 text-right text-xs"><button class="text-rose-700 hover:underline">归档</button></td>
+            </tr>
+            <tr class="row-h">
+              <td class="px-4 py-2.5"><a href="#" class="text-ink-800 hover:text-brand-600">🪪 DeepSeek·生产</a></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500 mono">deepseek</td>
+              <td class="px-4 py-2.5 mono text-xs text-ink-500">acct_1002</td>
+              <td class="px-4 py-2.5 text-xs">深圳希科</td>
+              <td class="px-4 py-2.5 text-right text-emerald-700">¥ 1,287.55</td>
+              <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500">2026-04-15 09:02</td>
+              <td class="px-4 py-2.5 text-right text-xs"><button class="text-rose-700 hover:underline">归档</button></td>
+            </tr>
+            <tr class="row-h">
+              <td class="px-4 py-2.5"><a href="#" class="text-ink-800 hover:text-brand-600">🪪 Anthropic·港主</a></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500 mono">anthropic</td>
+              <td class="px-4 py-2.5 mono text-xs text-ink-500">acct_1003</td>
+              <td class="px-4 py-2.5 text-xs">HK Holdings</td>
+              <td class="px-4 py-2.5 text-right text-ink-500">—</td>
+              <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">frozen</span></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500">2026-04-22 14:11</td>
+              <td class="px-4 py-2.5 text-right text-xs"><button class="text-rose-700 hover:underline">归档</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================  NEW ACCOUNT (CREATE)  ============== -->
+<div id="p-newacct" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <div class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </div>
+      <nav class="space-y-4">
+        <div><a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">📊 仪表盘</a></div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">🪪 账号管理</a>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔑 凭据管理</a>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">账号管理</h1>
+          <p class="mt-1 text-xs text-ink-500"><a class="hover:text-ink-800">账号管理</a> <span class="mx-2 text-ink-300">/</span> 新增主账号</p>
+        </div>
+      </div>
+
+      <!-- 创建表单 -->
+      <form class="rounded-2xl border border-ink-200 bg-white p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <div class="text-base font-semibold text-ink-900">新增主账号</div>
+            <div class="mt-0.5 text-xs text-ink-500">「主账号」= 你在某厂商的根账号。承担余额查询/对账，不直接调业务。业务调用走 凭据管理。</div>
+          </div>
+          <button type="button" class="text-xs text-ink-500 hover:text-ink-800">关闭</button>
+        </div>
+
+        <!-- ① 选厂商 -->
+        <div>
+          <div class="mb-2 flex items-baseline justify-between">
+            <div class="text-xs font-medium uppercase tracking-wider text-ink-500">① 选厂商</div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+            <!-- volc 选中态 -->
+            <label class="relative cursor-pointer rounded-lg border border-brand-500 ring-2 ring-brand-500/30 bg-white p-3 text-left transition">
+              <div class="flex items-center justify-between">
+                <div class="font-medium text-ink-900">火山引擎</div>
+                <span class="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700">豆包 / 方舟</span>
+              </div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">volc</div>
+            </label>
+            <!-- 其它灰态 -->
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">阿里云</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">aliyun</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">腾讯云</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">tencent</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">DeepSeek</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">deepseek</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">Anthropic</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">anthropic</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">DeepL</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">deepl</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">ElevenLabs</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">elevenlabs</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+            <label class="relative rounded-lg border border-ink-200 bg-ink-50 p-3 text-left opacity-60 cursor-not-allowed">
+              <div class="font-medium text-ink-900">Deepgram</div>
+              <div class="mt-0.5 text-[11px] text-ink-500 mono">deepgram</div>
+              <div class="mt-1 text-[11px] text-ink-500">敬请期待</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 帮助卡片 -->
+        <div class="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-xs text-ink-700">
+          <div class="font-medium text-brand-700">💡 记录火山引擎 主账号 登录信息</div>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-ink-700">
+            <li>主账号 = 你登录火山引擎控制台用的账号（手机号 / 邮箱）+ 密码</li>
+            <li>当前仅做「运营手工巡检 / 后台对账时跳转用」，不会拿它去调任何业务 API</li>
+            <li><span class="font-medium">余额 / 账单 的自动同步暂未启用</span>，账号详情页里的余额需手工录入；后续接入火山 billing API 时再补 AK/SK 字段</li>
+            <li>业务调用使用的 API key 走 凭据管理 里单独维护，不要混填到这里</li>
+            <li>密码会经 Vault 加密落库；本机浏览器不留明文</li>
+            <li>主体 / 公司 推荐填工商登记的公司全称，便于对账</li>
+          </ul>
+          <a href="https://www.volcengine.com/" target="_blank" rel="noreferrer"
+             class="mt-2 inline-flex items-center gap-1 text-brand-700 hover:underline">↗ 前往火山引擎官网</a>
+        </div>
+
+        <!-- ② 主账号信息 -->
+        <div class="mt-5">
+          <div class="mb-2 text-xs font-medium uppercase tracking-wider text-ink-500">② 主账号信息</div>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class="block">
+              <span class="text-xs text-ink-500">名称（备注）*</span>
+              <input class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                     placeholder="例：火山·主账号 / 公司A 火山主" />
+              <span class="mt-1 block text-[11px] text-ink-500">仅用于后台识别，可改</span>
+            </label>
+            <label class="block">
+              <span class="text-xs text-ink-500">主体 / 公司</span>
+              <input class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                     placeholder="工商登记公司全称" />
+              <span class="mt-1 block text-[11px] text-ink-500">对账时以此匹配发票</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ③ 登录账号/密码 -->
+        <div class="mt-5">
+          <div class="mb-2 flex items-baseline justify-between">
+            <div class="text-xs font-medium uppercase tracking-wider text-ink-500">③ 主账号 登录信息</div>
+            <div class="mono text-[11px] text-ink-500">account · password</div>
+          </div>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class="block">
+              <span class="text-xs text-ink-500">登录账号（手机号 / 邮箱）*</span>
+              <input class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                     placeholder="13800138000  或  ops@yourco.com" />
+            </label>
+            <label class="block">
+              <span class="text-xs text-ink-500">登录密码 * 🔒</span>
+              <input type="password" autocomplete="new-password"
+                     class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                     placeholder="••••••••••" />
+              <span class="mt-1 block text-[11px] text-ink-500">提交后由 Vault 加密落库；浏览器不缓存</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 按钮区 -->
+        <div class="mt-6 flex justify-end gap-2">
+          <button type="button" class="rounded-lg border border-ink-200 px-4 py-2 text-sm text-ink-800 hover:bg-ink-100">取消</button>
+          <button type="button" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">创建主账号</button>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>
+
+<!-- ============================  ACCOUNT DETAIL  ==================== -->
+<div id="p-acct" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <div class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </div>
+      <nav class="space-y-4">
+        <div><a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">📊 仪表盘</a></div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">🪪 账号管理</a>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔑 凭据管理</a>
+        </div>
+      </nav>
+    </aside>
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">🪪 火山方舟·主账号</h1>
+          <p class="mt-1 text-xs text-ink-500"><a href="#" class="hover:text-ink-800">账号管理</a> <span class="mx-2 text-ink-300">/</span> <span class="mono">acct_1001</span></p>
+        </div>
+        <button class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">归档账号</button>
+      </div>
+
+      <!-- 基本信息 -->
+      <section class="rounded-2xl border border-ink-200 bg-white p-5">
+        <h2 class="mb-4 text-sm font-semibold text-ink-900">基本信息</h2>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">厂商</div><div class="text-sm">Volcengine 火山方舟 <span class="ml-2 text-xs text-ink-500 mono">volc</span></div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">状态</div><div class="text-sm"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">主体</div><div class="text-sm">深圳希科科技</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">控制台</div><div class="text-sm"><a class="text-brand-600 hover:underline" href="#">https://console.volcengine.com/ark</a></div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">创建</div><div class="text-sm">2026-04-12 11:20</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">最后更新</div><div class="text-sm">2026-05-09 22:11</div></div>
+        </div>
+      </section>
+
+      <!-- 余额 -->
+      <section class="rounded-2xl border border-ink-200 bg-white p-5">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-ink-900">余额</h2>
+            <p class="mt-0.5 text-xs text-ink-500">火山自动同步暂未启用，下方数字由管理员手工录入</p>
+          </div>
+          <button class="rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-800 hover:bg-ink-50">手工录入余额</button>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">当前余额</div><div class="text-sm"><span class="text-emerald-700 text-base font-medium">¥ 8,432.20</span></div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">最近录入</div><div class="text-sm">2026-05-10 12:30</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">录入人</div><div class="text-sm text-ink-500">admin · liwei</div></div>
+        </div>
+      </section>
+
+      <!-- 关联凭据 -->
+      <section class="rounded-2xl border border-ink-200 bg-white p-5">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-ink-900">关联凭据</h2>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">3 活</span>
+            <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">1 冷却</span>
+            <span class="text-ink-500">共 4</span>
+            <a class="ml-2 rounded-lg bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700">+ 新增凭据</a>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-xl border border-ink-200">
+          <table class="w-full text-sm">
+            <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+              <tr>
+                <th class="px-4 py-2.5 text-left">名称</th>
+                <th class="px-4 py-2.5 text-left">业务板块</th>
+                <th class="px-4 py-2.5 text-left">环境</th>
+                <th class="px-4 py-2.5 text-right">健康分</th>
+                <th class="px-4 py-2.5 text-right">连续失败</th>
+                <th class="px-4 py-2.5 text-left">最近使用</th>
+                <th class="px-4 py-2.5 text-left">状态</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr class="row-h">
+                <td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-prod-chat-01</a><div class="text-[11px] mono text-ink-500">cred_2001</div></td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">chat</td>
+                <td class="px-4 py-2.5 text-xs">prod</td>
+                <td class="px-4 py-2.5">
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="h-1.5 w-16 overflow-hidden rounded-full bg-ink-200"><div class="h-full bg-emerald-500" style="width:100%"></div></div>
+                    <span class="text-xs tabular-nums text-ink-500 w-7 text-right">100</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2.5 text-right text-xs text-ink-500">0</td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">2026-05-10 12:32</td>
+                <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              </tr>
+              <tr class="row-h">
+                <td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-prod-emb-01</a><div class="text-[11px] mono text-ink-500">cred_2002</div></td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">embedding</td>
+                <td class="px-4 py-2.5 text-xs">prod</td>
+                <td class="px-4 py-2.5">
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="h-1.5 w-16 overflow-hidden rounded-full bg-ink-200"><div class="h-full bg-emerald-500" style="width:96%"></div></div>
+                    <span class="text-xs tabular-nums text-ink-500 w-7 text-right">96</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2.5 text-right text-xs text-ink-500">0</td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">2026-05-10 11:55</td>
+                <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              </tr>
+              <tr class="row-h">
+                <td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-tts-01</a><div class="text-[11px] mono text-ink-500">cred_2003</div></td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">tts</td>
+                <td class="px-4 py-2.5 text-xs">prod</td>
+                <td class="px-4 py-2.5">
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="h-1.5 w-16 overflow-hidden rounded-full bg-ink-200"><div class="h-full bg-amber-500" style="width:55%"></div></div>
+                    <span class="text-xs tabular-nums text-ink-500 w-7 text-right">55</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2.5 text-right text-xs text-rose-700">3</td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">2026-05-10 10:14</td>
+                <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">cooldown</span></td>
+              </tr>
+              <tr class="row-h">
+                <td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-asr-01</a><div class="text-[11px] mono text-ink-500">cred_2004</div></td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">asr</td>
+                <td class="px-4 py-2.5 text-xs">prod</td>
+                <td class="px-4 py-2.5">
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="h-1.5 w-16 overflow-hidden rounded-full bg-ink-200"><div class="h-full bg-emerald-500" style="width:88%"></div></div>
+                    <span class="text-xs tabular-nums text-ink-500 w-7 text-right">88</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2.5 text-right text-xs text-ink-500">0</td>
+                <td class="px-4 py-2.5 text-xs text-ink-500">2026-05-10 09:20</td>
+                <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ============================  CREDENTIALS LIST  ================== -->
+<div id="p-creds" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <div class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </div>
+      <nav class="space-y-4">
+        <div><a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">📊 仪表盘</a></div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🪪 账号管理</a>
+          <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">🔑 凭据管理</a>
+        </div>
+      </nav>
+    </aside>
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">凭据管理</h1>
+          <p class="mt-1 text-sm text-ink-500">每条凭据对应一把 API key + N 个服务绑定（capability × tier 配额）</p>
+        </div>
+        <a class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">+ 新增凭据</a>
+      </div>
+
+      <div class="flex flex-wrap gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-sm">
+        <label class="flex flex-col"><span class="text-xs text-ink-500">厂商</span><select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900"><option>全部</option></select></label>
+        <label class="flex flex-col"><span class="text-xs text-ink-500">业务板块</span><select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900"><option>全部</option></select></label>
+        <label class="flex flex-col"><span class="text-xs text-ink-500">主账号</span><select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900"><option>全部</option></select></label>
+        <label class="flex flex-col"><span class="text-xs text-ink-500">状态</span><select class="mt-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900"><option>全部</option></select></label>
+        <button class="self-end rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700">查询</button>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+        <table class="w-full text-sm">
+          <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+            <tr><th class="px-4 py-2.5 text-left">名称</th><th class="px-4 py-2.5 text-left">主账号</th><th class="px-4 py-2.5 text-left">业务板块</th><th class="px-4 py-2.5 text-left">环境</th><th class="px-4 py-2.5 text-right">健康分</th><th class="px-4 py-2.5 text-right">连续失败</th><th class="px-4 py-2.5 text-left">最近使用</th><th class="px-4 py-2.5 text-left">状态</th></tr>
+          </thead>
+          <tbody class="divide-y divide-ink-200">
+            <tr class="row-h"><td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-prod-chat-01</a></td><td class="px-4 py-2.5 text-xs text-ink-500">火山方舟·主</td><td class="px-4 py-2.5 text-xs">chat</td><td class="px-4 py-2.5 text-xs">prod</td><td class="px-4 py-2.5 text-right text-xs text-emerald-700 mono">100</td><td class="px-4 py-2.5 text-right text-xs text-ink-500">0</td><td class="px-4 py-2.5 text-xs text-ink-500">2分钟前</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+            <tr class="row-h"><td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 deepseek-chat-01</a></td><td class="px-4 py-2.5 text-xs text-ink-500">DeepSeek·生产</td><td class="px-4 py-2.5 text-xs">chat</td><td class="px-4 py-2.5 text-xs">prod</td><td class="px-4 py-2.5 text-right text-xs text-emerald-700 mono">98</td><td class="px-4 py-2.5 text-right text-xs text-ink-500">0</td><td class="px-4 py-2.5 text-xs text-ink-500">11秒前</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td></tr>
+            <tr class="row-h"><td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 volc-tts-01</a></td><td class="px-4 py-2.5 text-xs text-ink-500">火山方舟·主</td><td class="px-4 py-2.5 text-xs">tts</td><td class="px-4 py-2.5 text-xs">prod</td><td class="px-4 py-2.5 text-right text-xs text-amber-700 mono">55</td><td class="px-4 py-2.5 text-right text-xs text-rose-700">3</td><td class="px-4 py-2.5 text-xs text-ink-500">25分钟前</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">cooldown</span></td></tr>
+            <tr class="row-h"><td class="px-4 py-2.5"><a class="text-ink-800 hover:text-brand-600">🔑 anthropic-claude-01</a></td><td class="px-4 py-2.5 text-xs text-ink-500">Anthropic·港主</td><td class="px-4 py-2.5 text-xs">chat</td><td class="px-4 py-2.5 text-xs">prod</td><td class="px-4 py-2.5 text-right text-xs text-rose-700 mono">12</td><td class="px-4 py-2.5 text-right text-xs text-rose-700">9</td><td class="px-4 py-2.5 text-xs text-ink-500">2小时前</td><td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">disabled</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================  USER DETAIL  ======================= -->
+<div id="p-user" class="pane">
+  <div class="flex min-h-[700px] rounded-2xl border border-ink-200 bg-ink-50 overflow-hidden">
+    <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+      <div class="flex items-center gap-2 px-2 pb-6">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">A</span>
+        <span class="font-semibold tracking-tight text-ink-900">Admin</span>
+      </div>
+      <nav class="space-y-4">
+        <div><a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">📊 仪表盘</a></div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">资源</div>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🪪 账号管理</a>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔑 凭据管理</a>
+        </div>
+        <div>
+          <div class="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">运营</div>
+          <a class="block rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700">👥 用户</a>
+          <a class="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-ink-100">🔍 审计日志</a>
+        </div>
+      </nav>
+    </aside>
+    <main class="flex-1 px-6 py-8 md:px-10 space-y-6 overflow-x-hidden">
+      <div class="flex items-end justify-between border-b border-ink-200 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-ink-900">用户 #1042</h1>
+          <p class="mt-1 text-sm text-ink-500">liwei@example.com</p>
+        </div>
+      </div>
+
+      <!-- 基本信息 -->
+      <div class="grid grid-cols-2 gap-4 rounded-2xl border border-ink-200 bg-white p-5 md:grid-cols-4">
+        <div><div class="text-[11px] text-ink-500">状态</div><div class="text-sm">active</div></div>
+        <div><div class="text-[11px] text-ink-500">风险分</div><div class="text-sm">0</div></div>
+        <div><div class="text-[11px] text-ink-500">QPS 上限</div><div class="text-sm">10</div></div>
+        <div><div class="text-[11px] text-ink-500">日消费上限</div><div class="text-sm">¥ 500.00</div></div>
+        <div><div class="text-[11px] text-ink-500">注册时间</div><div class="text-sm">2026-04-01 09:12</div></div>
+        <div><div class="text-[11px] text-ink-500">最近登录</div><div class="text-sm">2026-05-10 09:30</div></div>
+        <div><div class="text-[11px] text-ink-500">实名等级</div><div class="text-sm">2</div></div>
+        <div><div class="text-[11px] text-ink-500">昵称</div><div class="text-sm">李 W</div></div>
+      </div>
+
+      <!-- 钱包/消费 -->
+      <div class="rounded-2xl border border-ink-200 bg-white">
+        <div class="border-b border-ink-200 px-5 py-3 text-sm font-semibold text-ink-900">💰 钱包 · 消费（最近 30 日）</div>
+        <div class="grid grid-cols-2 gap-4 px-5 py-4 md:grid-cols-5">
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">可用余额</div><div class="mt-0.5 text-base font-medium tabular-nums text-emerald-700">¥ 312.45</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">冻结</div><div class="mt-0.5 text-base font-medium tabular-nums text-ink-900">¥ 0.00</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">累计充值</div><div class="mt-0.5 text-base font-medium tabular-nums text-ink-900">¥ 1,000.00</div></div>
+          <div><div class="text-[11px] uppercase tracking-wider text-ink-500">累计消费</div><div class="mt-0.5 text-base font-medium tabular-nums text-ink-900">¥ 687.55</div></div>
+          <div>
+            <div class="text-[11px] uppercase tracking-wider text-ink-500">近 30 日消费</div>
+            <div class="mt-0.5 text-base font-medium tabular-nums text-ink-900">¥ 412.18</div>
+            <div class="text-[11px] text-ink-500">3,217 次调用</div>
+          </div>
+        </div>
+        <div class="border-t border-ink-200">
+          <div class="px-5 py-2.5 text-xs uppercase tracking-wider text-ink-500">最近充值（3）</div>
+          <table class="w-full text-sm">
+            <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+              <tr><th class="px-4 py-2 text-left">订单号</th><th class="px-4 py-2 text-left">渠道</th><th class="px-4 py-2 text-right">金额</th><th class="px-4 py-2 text-left">状态</th><th class="px-4 py-2 text-left">支付时间</th><th class="px-4 py-2 text-left">创建</th></tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-4 py-2 mono text-xs">RO20260507X123</td><td class="px-4 py-2 text-xs">alipay</td><td class="px-4 py-2 text-right tabular-nums">¥ 500.00</td><td class="px-4 py-2"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700">paid</span></td><td class="px-4 py-2 text-xs text-ink-500">2026-05-07 13:01</td><td class="px-4 py-2 text-xs text-ink-500">2026-05-07 13:00</td></tr>
+              <tr><td class="px-4 py-2 mono text-xs">RO20260420X019</td><td class="px-4 py-2 text-xs">wechat</td><td class="px-4 py-2 text-right tabular-nums">¥ 300.00</td><td class="px-4 py-2"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700">paid</span></td><td class="px-4 py-2 text-xs text-ink-500">2026-04-20 18:41</td><td class="px-4 py-2 text-xs text-ink-500">2026-04-20 18:40</td></tr>
+              <tr><td class="px-4 py-2 mono text-xs">RO20260418X007</td><td class="px-4 py-2 text-xs">alipay</td><td class="px-4 py-2 text-right tabular-nums">¥ 200.00</td><td class="px-4 py-2"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">pending</span></td><td class="px-4 py-2 text-xs text-ink-500">-</td><td class="px-4 py-2 text-xs text-ink-500">2026-04-18 10:22</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 订阅 -->
+      <div class="rounded-2xl border border-ink-200 bg-white">
+        <div class="flex items-center justify-between border-b border-ink-200 px-5 py-3">
+          <div class="text-sm font-semibold text-ink-900">订阅</div>
+          <button class="rounded-lg border border-ink-200 bg-white px-4 py-1.5 text-xs font-medium text-ink-900 hover:bg-ink-50">+ 开订阅</button>
+        </div>
+        <table class="w-full text-sm">
+          <thead class="bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500">
+            <tr><th class="px-4 py-2.5 text-left">SKU</th><th class="px-4 py-2.5 text-left">套餐</th><th class="px-4 py-2.5 text-right">配额（已用 / 总）</th><th class="px-4 py-2.5 text-right">QPS</th><th class="px-4 py-2.5 text-left">周期截止</th><th class="px-4 py-2.5 text-left">状态</th><th class="px-4 py-2.5 text-right">操作</th></tr>
+          </thead>
+          <tbody class="divide-y divide-ink-200">
+            <tr>
+              <td class="px-4 py-2.5"><div class="text-ink-800">chat-volc-deepseek-v1</div><div class="text-[11px] text-ink-500">基础对话 · 火山+DeepSeek</div></td>
+              <td class="px-4 py-2.5 text-xs text-ink-500">monthly</td>
+              <td class="px-4 py-2.5 text-right mono text-xs">3,217 / 10,000</td>
+              <td class="px-4 py-2.5 text-right mono text-xs">10</td>
+              <td class="px-4 py-2.5 text-xs text-ink-500">2026-06-01 00:00</td>
+              <td class="px-4 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+              <td class="px-4 py-2.5 text-right">
+                <div class="inline-flex flex-wrap justify-end gap-1.5">
+                  <button class="rounded-md border border-ink-300 px-2 py-0.5 text-[11px] text-ink-800 hover:bg-ink-100">加配额</button>
+                  <button class="rounded-md border border-ink-300 px-2 py-0.5 text-[11px] text-ink-800 hover:bg-ink-100">暂停</button>
+                  <button class="rounded-md border border-rose-300 px-2 py-0.5 text-[11px] text-rose-700 hover:bg-rose-50">取消</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+</div><!-- /stage -->
+
+<footer class="mx-auto max-w-7xl px-6 py-8 text-center text-xs text-ink-500">
+  上方 Tab 可切换屏幕。所有数据为示例占位，颜色 / 间距 / 状态徽标与 <span class="mono">app/admin/</span> 真实组件 1:1 对齐。
+</footer>
+
+</body>
+</html>

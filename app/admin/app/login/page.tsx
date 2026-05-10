@@ -2,25 +2,35 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getToken, setToken } from '@/lib/admin-api';
+import { getToken, login } from '@/lib/admin-api';
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [token, setLocal] = useState('');
+  const [account, setAccount] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (getToken()) router.replace('/dashboard');
   }, [router]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token.trim()) {
-      setError('请输入 LLMHUB_ADMIN_TOKEN');
+    setError(null);
+    if (!account.trim() || !password) {
+      setError('账号和密码不能为空');
       return;
     }
-    setToken(token.trim());
-    router.push('/dashboard');
+    setSubmitting(true);
+    try {
+      await login(account.trim(), password);
+      router.push('/dashboard');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -32,25 +42,40 @@ export default function AdminLogin() {
           </span>
           <span className="text-xl font-semibold tracking-tight text-ink-900">LLMHub Admin</span>
         </div>
-        <h1 className="text-lg font-semibold text-ink-900">输入管理员 Token</h1>
+        <h1 className="text-lg font-semibold text-ink-900">后台登录</h1>
         <p className="mt-1 text-sm text-ink-500">
-          来自 account 服务环境变量 <code className="mono rounded bg-ink-100 px-1">LLMHUB_ADMIN_TOKEN</code>，
-          浏览器本地存储后随每次请求发送 <code className="mono">X-Admin-Token</code>。
+          管理员账号独立于终端用户。账号由首位 admin 通过 <code className="mono rounded bg-ink-100 px-1">LLMHUB_ADMIN_BOOTSTRAP_*</code> 环境变量种子化，后续可在后台扩展。
         </p>
         <form className="mt-5 space-y-4" onSubmit={onSubmit}>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setLocal(e.target.value)}
-            placeholder="LLMHUB_ADMIN_TOKEN"
-            className="block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
-          />
+          <label className="block">
+            <span className="text-xs text-ink-500">登录账号</span>
+            <input
+              type="text"
+              autoComplete="username"
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
+              placeholder="管理员账号"
+              className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-ink-500">登录密码</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="密码"
+              className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+            />
+          </label>
           {error ? <div className="text-sm text-rose-700">{error}</div> : null}
           <button
             type="submit"
-            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            disabled={submitting}
+            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
           >
-            进入后台
+            {submitting ? '登录中…' : '登录'}
           </button>
         </form>
       </div>

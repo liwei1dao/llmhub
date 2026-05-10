@@ -28,12 +28,14 @@ var Vendors = map[string]Vendor{
 	"volc": {
 		ID:         "volc",
 		Name:       "火山引擎",
-		ConsoleURL: "https://console.volcengine.com/",
-		// 主账号鉴权用云账号 RAM 的 ak/sk（用于查账户余额、拉账单）。
-		// 业务凭据由各 VendorProduct 单独定义，不要混淆。
+		ConsoleURL: "https://www.volcengine.com/",
+		// 当前阶段：仅记录控制台「登录账号 + 密码」，供运营手工巡检 / 后台对账时使用。
+		// 自动抓余额 / 拉账单的能力尚未接入；接入后会以追加字段（如 AK/SK 或 OAuth
+		// token）扩展本 schema，旧记录的 auth_payload 不强制迁移，billing 适配器按需
+		// 检查可用字段。每家厂商的鉴权字段独立设计，不要塞进通用列表。
 		MasterAuthSchema: []FieldSpec{
-			{Key: "access_key_id", Label: "Access Key ID", Required: true},
-			{Key: "secret_access_key", Label: "Secret Access Key", Sensitive: true, Required: true},
+			{Key: "account", Label: "登录账号（手机号/邮箱）", Required: true},
+			{Key: "password", Label: "登录密码", Sensitive: true, Required: true},
 		},
 	},
 	"aliyun": {

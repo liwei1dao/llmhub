@@ -1,14 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { setToken } from '@/lib/admin-api';
+import { logout } from '@/lib/admin-api';
 
 export default function LogoutButton() {
   const router = useRouter();
   return (
     <button
-      onClick={() => {
-        setToken('');
+      onClick={async () => {
+        await logout();
         router.push('/login');
       }}
       className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink-500 transition hover:bg-ink-100 hover:text-ink-800"
