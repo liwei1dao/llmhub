@@ -10,7 +10,7 @@ export default function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (getToken()) router.replace('/admin/dashboard');
+    if (getToken()) router.replace('/dashboard');
   }, [router]);
 
   function onSubmit(e: React.FormEvent) {
@@ -20,7 +20,7 @@ export default function AdminLogin() {
       return;
     }
     setToken(token.trim());
-    router.push('/admin/dashboard');
+    router.push('/dashboard');
   }
 
   return (

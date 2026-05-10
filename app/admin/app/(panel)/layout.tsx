@@ -3,14 +3,25 @@ import type { ReactNode } from 'react';
 import LogoutButton from './_components/logout-button';
 import RequireToken from './_components/require-token';
 
-const NAV = [
-  { href: '/admin/dashboard', label: '总览' },
-  { href: '/admin/pool', label: '账号池' },
-  { href: '/admin/users', label: '用户' },
-  { href: '/admin/providers', label: '厂商' },
-  { href: '/admin/pricing', label: '定价' },
-  { href: '/admin/recharges', label: '充值确认' },
-  { href: '/admin/recon', label: '对账' },
+const NAV: { group: string; items: { href: string; label: string }[] }[] = [
+  {
+    group: '',
+    items: [{ href: '/dashboard', label: '📊 仪表盘' }],
+  },
+  {
+    group: '资源',
+    items: [
+      { href: '/accounts', label: '🪪 账号管理' },
+      { href: '/credentials', label: '🔑 凭据管理' },
+    ],
+  },
+  {
+    group: '运营',
+    items: [
+      { href: '/users', label: '👥 用户' },
+      { href: '/audit', label: '🔍 审计日志' },
+    ],
+  },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -18,21 +29,32 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <RequireToken>
       <div className="flex min-h-screen">
         <aside className="hidden w-60 shrink-0 border-r border-ink-700 bg-ink-800 px-4 py-6 md:block">
-          <Link href="/admin/dashboard" className="flex items-center gap-2 px-2 pb-6">
+          <Link href="/dashboard" className="flex items-center gap-2 px-2 pb-6">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-sm font-semibold text-white">
               A
             </span>
             <span className="font-semibold tracking-tight text-white">Admin</span>
           </Link>
-          <nav className="space-y-1">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="block rounded-lg px-3 py-2 text-sm text-ink-200 transition hover:bg-ink-700"
-              >
-                {n.label}
-              </Link>
+          <nav className="space-y-4">
+            {NAV.map((g, i) => (
+              <div key={i}>
+                {g.group ? (
+                  <div className="px-3 mb-1.5 text-[11px] uppercase tracking-wider text-ink-500">
+                    {g.group}
+                  </div>
+                ) : null}
+                <div className="space-y-0.5">
+                  {g.items.map((n) => (
+                    <Link
+                      key={n.href}
+                      href={n.href}
+                      className="block rounded-lg px-3 py-2 text-sm text-ink-200 transition hover:bg-ink-700"
+                    >
+                      {n.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
           <div className="mt-8 border-t border-ink-700 pt-4">

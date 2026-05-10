@@ -1,16 +1,25 @@
 // Package main is the single-binary entry point for the LLMHub
-// platform. Everything runs in one process:
+// platform. The platform follows a「聚合 SDK」mode (see
+// docs/03-核心数据结构设计-v2.md):
 //
-//   - public API gateway (`/v1/...` OpenAI/Anthropic-compat)
-//   - account / iam / wallet HTTP API (`/api/user/...`)
-//   - admin ops API (`/api/admin/...`)
-//   - scheduler (in-process, no RPC hop)
-//   - billing (the wallet service is called directly)
-//   - background workers (aggregator, hold-reaper, daily-recon)
+//   - SDK clients (downloaded by users) call POST /sdk/credentials/issue
+//     to exchange (id, key) + sku_id for a short-lived lease + the real
+//     upstream credential.
+//   - SDK clients then call upstream (火山 / DeepSeek / ...) directly,
+//     and asynchronously POST /sdk/usage/report so the platform can
+//     decrement quotas and adjust binding health.
+//   - The platform itself is NOT in the upstream request path.
 //
-// Default port: 8080. All routes share one chi router so the public
-// edge, the console, and the admin can be served from the same listener
-// behind one reverse proxy.
+// Default port: 8080. The single chi router fans out to:
+//
+//   - /sdk/*        — SDK API (credential issue + usage report)
+//   - /api/user/*   — end-user console (signup / subscriptions / wallet / SDK download)
+//   - /api/admin/*  — operator admin (vendor pool / SKUs / users / observability)
+//   - /health, /ready
+//
+// The pre-v0.2 OpenAI-compatible /v1/chat/completions HTTP gateway has
+// been removed: the platform never proxies upstream calls in the
+// 聚合 SDK mode.
 package main
 
 import (
@@ -22,44 +31,27 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/llmhub/llmhub/internal/account"
 	"github.com/llmhub/llmhub/internal/admin"
-	"github.com/llmhub/llmhub/internal/capability/chat"
-	"github.com/llmhub/llmhub/internal/capability/embedding"
+	"github.com/llmhub/llmhub/internal/audit"
 	"github.com/llmhub/llmhub/internal/catalog"
 	catalogrepo "github.com/llmhub/llmhub/internal/catalog/repo"
-	"github.com/llmhub/llmhub/internal/gateway"
 	"github.com/llmhub/llmhub/internal/iam"
 	iamrepo "github.com/llmhub/llmhub/internal/iam/repo"
 	meteringrepo "github.com/llmhub/llmhub/internal/metering/repo"
-	"github.com/llmhub/llmhub/internal/platform/cache"
 	"github.com/llmhub/llmhub/internal/platform/config"
 	"github.com/llmhub/llmhub/internal/platform/db"
-	"github.com/llmhub/llmhub/internal/platform/httpclient"
 	"github.com/llmhub/llmhub/internal/platform/log"
 	"github.com/llmhub/llmhub/internal/platform/mq"
-	"github.com/llmhub/llmhub/internal/platform/ratelimit"
 	"github.com/llmhub/llmhub/internal/platform/vault"
 	"github.com/llmhub/llmhub/internal/pool"
 	poolrepo "github.com/llmhub/llmhub/internal/pool/repo"
-	"github.com/llmhub/llmhub/internal/provider"
-	"github.com/llmhub/llmhub/internal/scheduler"
+	"github.com/llmhub/llmhub/internal/sdkapi"
 	"github.com/llmhub/llmhub/internal/wallet"
 	walletrepo "github.com/llmhub/llmhub/internal/wallet/repo"
 	"github.com/llmhub/llmhub/internal/worker"
 
 	"github.com/nats-io/nats.go"
-
-	// Provider adapters register via init() on import.
-	_ "github.com/llmhub/llmhub/internal/provider/anthropic"
-	_ "github.com/llmhub/llmhub/internal/provider/dashscope"
-	_ "github.com/llmhub/llmhub/internal/provider/deepgram"
-	_ "github.com/llmhub/llmhub/internal/provider/deepl"
-	_ "github.com/llmhub/llmhub/internal/provider/deepseek"
-	_ "github.com/llmhub/llmhub/internal/provider/elevenlabs"
-	_ "github.com/llmhub/llmhub/internal/provider/volc"
 )
 
 const serviceName = "llmhub"
@@ -82,88 +74,28 @@ func main() {
 	}
 	defer dbpool.Close()
 
-	// Catalog reconcile from configs/providers/*.yaml at startup.
-	if err := catalog.NewLoader(dbpool).Reconcile(ctx, "configs"); err != nil {
-		logger.Warn("catalog reconcile skipped", "err", err)
-	}
-
-	// ---- domain services (in-process, shared across the router) ----
+	// ---- domain services ----
 	iamSvc := iam.NewService(iamrepo.New(dbpool))
 	walletSvc := wallet.NewService(walletrepo.New(dbpool))
 	poolSvc := pool.New(poolrepo.New(dbpool))
 	catalogSvc := catalog.NewService(catalogrepo.New(dbpool))
-	schedSvc := scheduler.NewService(poolSvc, scheduler.NewPicker(poolSvc, scheduler.NewMemStickiness()))
 	meterRepo := meteringrepo.New(dbpool)
 
-	providerMgr := provider.NewManager()
-	if err := providerMgr.LoadDir("configs/providers"); err != nil {
-		logger.Warn("provider manager load failed (continuing without providers)", "err", err)
-	}
-
-	dispatcher := &gateway.ProviderDispatcher{
-		Catalog:   catalogSvc,
-		Pool:      poolSvc,
-		Providers: providerMgr,
-		Vault:     vault.NewCached(vault.DevInline{}),
-		HTTP:      httpclient.New(),
-	}
-
-	var invoker chat.ProviderInvoker = gateway.RealProvider{D: dispatcher}
-	if os.Getenv("LLMHUB_GATEWAY_MOCK") == "1" {
-		invoker = gateway.MockProvider{}
-		logger.Warn("gateway running with MockProvider (dev mode)")
-	}
-
-	// ---- platform: rate limiter (Redis-preferred, in-mem fallback) ----
-	var limiter ratelimit.Limiter = ratelimit.NewMemory()
-	if cfg.Redis.Addr != "" {
-		if rc, err := cache.Open(ctx, cfg.Redis); err == nil {
-			limiter = ratelimit.Fallback{
-				Primary:   ratelimit.NewRedis(rc, "llmhub:rl:"),
-				Secondary: ratelimit.NewMemory(),
-			}
-		} else {
-			logger.Warn("redis unavailable; using in-memory rate limiter", "err", err)
-		}
-	}
-
-	// ---- platform: NATS publisher (optional) ----
-	var publisher chat.EventPublisher
+	// Optional NATS connection for usage-event fanout. The aggregator
+	// worker subscribes to it; if unavailable, usage still gets recorded
+	// directly into metering.call_logs by the SDK report path — NATS
+	// only adds out-of-process aggregation.
 	var natsConn *nats.Conn
 	if cfg.NATS.URL != "" {
 		if nc, err := mq.Open(cfg.NATS); err == nil {
-			publisher = gateway.NATSPublisher{NC: nc}
 			natsConn = nc
-			logger.Info("call events: publishing to NATS", "url", cfg.NATS.URL)
+			logger.Info("nats connected", "url", cfg.NATS.URL)
 		} else {
-			logger.Warn("nats unavailable; call events will be dropped", "err", err)
+			logger.Warn("nats unavailable; usage events stay in-process", "err", err)
 		}
 	}
 
-	// ---- gateway HTTP handler (/v1/...) ----
-	gatewayHandler := gateway.NewServer(logger, gateway.Deps{
-		Logger:    logger,
-		Scheduler: schedSvc,
-		Billing:   gateway.WalletBilling{S: walletSvc},
-		Auth:      gateway.IAMAuth{S: iamSvc},
-		Provider:  invoker,
-		Catalog:   catalogSvc,
-		Publisher: publisher,
-	}, gateway.Options{
-		RateLimiter:        limiter,
-		RateLimitPerSecond: 20,
-		Embedding: &embedding.Deps{
-			Logger:    logger,
-			Scheduler: schedSvc,
-			Billing:   gateway.WalletBilling{S: walletSvc},
-			Auth:      gateway.IAMAuth{S: iamSvc},
-			Provider:  gateway.EmbeddingInvoker{D: dispatcher},
-			Catalog:   catalogSvc,
-			Publisher: publisher,
-		},
-	})
-
-	// ---- account + admin HTTP handler (/api/user/* + /api/admin/*) ----
+	// ---- admin server ----
 	adminToken := os.Getenv("LLMHUB_ADMIN_TOKEN")
 	if adminToken == "" {
 		logger.Warn("admin token not set — /api/admin/* routes will reject all requests")
@@ -172,15 +104,40 @@ func main() {
 		WithIAM(iamrepo.New(dbpool)).
 		WithCatalog(catalogrepo.New(dbpool)).
 		WithMetering(meterRepo).
-		WithWallet(walletSvc)
+		WithWallet(walletSvc).
+		WithPool(poolSvc).
+		WithAudit(audit.NewPgRecorder(dbpool, logger))
+
+	// ---- SDK API: the only entry point user binaries hit ----
+	// SDK does (id, key) + sku_id → short-lived lease + real upstream
+	// auth_payload. Platform is NOT on the upstream request path.
+	sdkSrv := sdkapi.New(sdkapi.Deps{
+		Logger:   logger,
+		Auth:     sdkAuthAdapter{s: iamSvc},
+		Catalog:  catalogSvc,
+		Pool:     poolSvc,
+		Subs:     iamrepo.New(dbpool).Subscriptions(),
+		Metering: meterRepo,
+		Vault:    vault.NewCached(vault.DevInline{}),
+	})
+	// SDK needs upstream endpoint + protocol_family hints so its in-binary
+	// adapter can pick the right wire path; both come from the static
+	// catalog dictionary.
+	sdkapi.SetProductHinter(func(productID string) (string, string, bool) {
+		p, ok := catalog.LookupProduct(productID)
+		if !ok {
+			return "", "", false
+		}
+		return p.EndpointTemplate, p.ProtocolFamily, true
+	})
+
+	// ---- compose: account-server hosts /api/user/*, /api/admin/*, /sdk/* ----
 	accountSrv := account.New(logger, iamSvc, walletSvc, adminSrv).
 		WithMetering(meterRepo).
+		WithSDKAPI(sdkSrv).
+		WithSubscriptions(iamrepo.New(dbpool).Subscriptions()).
+		WithCatalog(catalogSvc).
 		WithPinger(dbpool)
-
-	// ---- compose router: gateway under /v1, account elsewhere ----
-	root := chi.NewRouter()
-	root.Mount("/v1", gatewayHandler)
-	root.Mount("/", accountSrv.Handler())
 
 	addr := cfg.HTTP.Addr
 	if addr == "" {
@@ -188,28 +145,19 @@ func main() {
 	}
 	httpSrv := &http.Server{
 		Addr:              addr,
-		Handler:           root,
+		Handler:           accountSrv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       time.Duration(cfg.HTTP.ReadTimeoutSec) * time.Second,
-		// SSE streams must not be killed by a write deadline.
-		WriteTimeout: 0,
+		WriteTimeout:      0,
 	}
 
-	// ---- start background workers in-process ----
+	// ---- background workers ----
 	if natsConn != nil {
 		agg := &worker.Aggregator{Logger: logger, NC: natsConn, Sink: meterRepo}
 		if _, err := agg.Subscribe(ctx); err != nil {
 			logger.Error("aggregator subscribe failed", "err", err)
 		}
 	}
-	reaper := &worker.HoldReaper{
-		Logger:  logger,
-		Holds:   meterHoldStore{repo: meterRepo},
-		Billing: walletSvc,
-		Tick:    30 * time.Second,
-		Batch:   100,
-	}
-	go reaper.Run(ctx)
 	recon := &worker.DailyRecon{Logger: logger, Store: meterRepo, HourUTC: 0, MinuteUTC: 5}
 	go recon.Run(ctx)
 
@@ -222,7 +170,7 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	logger.Info("llmhub shutting down", "released", reaper.Released(), "recon_runs", recon.Runs())
+	logger.Info("llmhub shutting down", "recon_runs", recon.Runs())
 	shutdownCtx, sc := context.WithTimeout(context.Background(), 15*time.Second)
 	defer sc()
 	_ = httpSrv.Shutdown(shutdownCtx)
@@ -231,25 +179,16 @@ func main() {
 	}
 }
 
-// meterHoldStore adapts metering/repo into worker.HoldStore. Kept here
-// so worker doesn't import the repo package directly.
-type meterHoldStore struct{ repo *meteringrepo.Repo }
+// sdkAuthAdapter bridges *iam.Service to sdkapi.AuthResolver. The iam
+// service returns the full APIKey row; the SDK API only needs (user_id,
+// api_key_id), so we adapt down here rather than widening the SDK
+// interface to import iam directly.
+type sdkAuthAdapter struct{ s *iam.Service }
 
-func (m meterHoldStore) ListExpiredHolds(ctx context.Context, limit int) ([]worker.ExpiredHold, error) {
-	rows, err := m.repo.ListExpiredHolds(ctx, limit)
+func (a sdkAuthAdapter) AuthenticateAPIKey(ctx context.Context, plaintext string) (int64, int64, error) {
+	k, err := a.s.AuthenticateAPIKey(ctx, plaintext)
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
-	out := make([]worker.ExpiredHold, len(rows))
-	for i, r := range rows {
-		out[i] = worker.ExpiredHold{
-			RequestID: r.RequestID, UserID: r.UserID,
-			AccountID: r.AccountID, AmountCents: r.AmountCents,
-		}
-	}
-	return out, nil
-}
-
-func (m meterHoldStore) MarkHoldExpired(ctx context.Context, requestID string) error {
-	return m.repo.MarkHoldExpired(ctx, requestID)
+	return k.UserID, k.ID, nil
 }

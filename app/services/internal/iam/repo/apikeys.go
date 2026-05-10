@@ -36,6 +36,12 @@ func (r *Repo) CreateAPIKey(ctx context.Context, userID int64, prefix, hash, nam
 		UsageCapCents: capCents,
 		ExpiresAt:     expiresAt,
 	}
+	// scopes column is NOT NULL TEXT[] DEFAULT '{}'; pgx treats a nil
+	// slice as SQL NULL which violates the constraint. Coerce to an
+	// empty slice so the row writes through cleanly.
+	if scopes == nil {
+		scopes = []string{}
+	}
 	const q = `
 INSERT INTO iam.api_keys (user_id, prefix, key_hash, name, scopes, usage_cap_cents, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)

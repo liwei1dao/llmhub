@@ -21,6 +21,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+app.local.yaml
+app.*.local.yaml
 
 # Go
 vendor/

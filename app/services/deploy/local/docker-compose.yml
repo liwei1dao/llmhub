@@ -1,0 +1,70 @@
+# Local compose: only llmhub api + web + one-shot migrate.
+# External deps (postgres / redis / nats / vault) are expected to already be
+# running on the shared `1panel-network` Docker network.
+#
+# Build images first:
+#   docker build -t llmhub-api:local -f app/deploy/Dockerfile app
+#   docker build -t llmhub-web:local -f app/web/Dockerfile     app/web
+#
+# Then from this folder:
+#   docker compose --env-file .env.local up -d
+#
+# Endpoints:
+#   web → http://localhost:13000
+#   api → http://localhost:8080
+
+name: llmhub-local
+
+x-base: &base
+  restart: unless-stopped
+  networks: [1panel-network]
+  logging:
+    driver: json-file
+    options: { max-size: '20m', max-file: '5' }
+
+services:
+  migrate:
+    image: gomicro/goose:3.26.0
+    platform: linux/amd64
+    networks: [1panel-network]
+    volumes:
+      - ../../migrations:/migrations:ro
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: ${LLMHUB_DB_DSN}
+    entrypoint: ['/bin/goose']
+    command: ['-dir', '/migrations', 'up']
+    restart: 'no'
+
+  api:
+    <<: *base
+    image: llmhub-api:local
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment:
+      LLMHUB_ENV: ${LLMHUB_ENV:-local}
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_REDIS_PASSWORD: ${LLMHUB_REDIS_PASSWORD:-}
+      LLMHUB_REDIS_DB: ${LLMHUB_REDIS_DB:-0}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_VAULT_ADDR: ${LLMHUB_VAULT_ADDR}
+      LLMHUB_VAULT_TOKEN: ${LLMHUB_VAULT_TOKEN}
+      LLMHUB_VAULT_MOUNT_PATH: ${LLMHUB_VAULT_MOUNT_PATH:-secret/pool}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-http://localhost:13000}
+    ports: ['8080:8080']
+
+  web:
+    <<: *base
+    image: llmhub-web:local
+    depends_on:
+      api: { condition: service_started }
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8080}
+    ports: ['13000:3000']
+
+networks:
+  1panel-network:
+    external: true

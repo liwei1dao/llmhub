@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api, type AdminUser } from '@/lib/admin-api';
 import { fmtCents, fmtDateTime } from '@/lib/format';
@@ -81,8 +82,16 @@ export default function UsersPage() {
             ) : (
               rows.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-2.5 mono">{u.id}</td>
-                  <td className="px-4 py-2.5">{u.email ?? '-'}</td>
+                  <td className="px-4 py-2.5 mono">
+                    <Link href={`/admin/users/${u.id}`} className="text-brand-400 hover:underline">
+                      {u.id}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <Link href={`/admin/users/${u.id}`} className="hover:underline">
+                      {u.email ?? '-'}
+                    </Link>
+                  </td>
                   <td className="px-4 py-2.5">{u.phone ?? '-'}</td>
                   <td className="px-4 py-2.5">{u.status}</td>
                   <td className="px-4 py-2.5 text-right">{u.risk_score}</td>

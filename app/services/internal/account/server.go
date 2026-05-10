@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -16,8 +17,11 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/llmhub/llmhub/internal/admin"
+	"github.com/llmhub/llmhub/internal/catalog"
 	"github.com/llmhub/llmhub/internal/iam"
+	iamrepo "github.com/llmhub/llmhub/internal/iam/repo"
 	meteringrepo "github.com/llmhub/llmhub/internal/metering/repo"
+	"github.com/llmhub/llmhub/internal/sdkapi"
 	"github.com/llmhub/llmhub/internal/wallet"
 	"github.com/llmhub/llmhub/pkg/httpx"
 )
@@ -34,6 +38,9 @@ type Server struct {
 	metering *meteringrepo.Repo
 	sessions *iam.MemSessionIndex
 	admin    *admin.Server
+	sdk      *sdkapi.Server // optional: /sdk/* (聚合 SDK 凭据下发)
+	subs     *iamrepo.SubscriptionRepo // optional: 用户订阅 + 配额观察
+	catalog  *catalog.Service          // optional: SKU 元数据装填
 	mux      http.Handler
 	pinger   Pinger
 }
@@ -72,6 +79,33 @@ func (s *Server) WithPinger(p Pinger) *Server {
 	return s
 }
 
+// WithSDKAPI mounts the /sdk/* surface used by downloaded SDK clients
+// to exchange (id, key) for short-lived upstream credential leases and
+// to report runtime usage. Wire is optional — without it the platform
+// runs admin / user-console only and SDK clients can't issue.
+func (s *Server) WithSDKAPI(sdk *sdkapi.Server) *Server {
+	s.sdk = sdk
+	s.mux = s.routes()
+	return s
+}
+
+// WithSubscriptions plugs in the user subscription repo for
+// /api/user/subscriptions (服务订阅 + 配额观察).
+func (s *Server) WithSubscriptions(r *iamrepo.SubscriptionRepo) *Server {
+	s.subs = r
+	s.mux = s.routes()
+	return s
+}
+
+// WithCatalog plugs in the catalog service so the user-side
+// /api/user/subscriptions handler can hydrate SKU metadata
+// (display_name / billing_unit / category) for the rows it returns.
+func (s *Server) WithCatalog(c *catalog.Service) *Server {
+	s.catalog = c
+	s.mux = s.routes()
+	return s
+}
+
 // Handler returns the composed http.Handler (router + middleware).
 func (s *Server) Handler() http.Handler { return s.mux }
 
@@ -89,6 +123,9 @@ func (s *Server) routes() http.Handler {
 	if s.admin != nil {
 		s.admin.Mount(r)
 	}
+	if s.sdk != nil {
+		s.sdk.Mount(r)
+	}
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/auth/register", s.handleRegister)
@@ -103,6 +140,9 @@ func (s *Server) routes() http.Handler {
 			r.Get("/usage/series", s.handleUsageSeries)
 			r.Get("/api-keys", s.handleListAPIKeys)
 			r.Post("/api-keys", s.handleCreateAPIKey)
+			r.Delete("/api-keys/{id}", s.handleRevokeAPIKey)
+			r.Get("/subscriptions", s.handleListSubscriptions)
+			r.Get("/sdk/downloads", s.handleSDKDownloads)
 			r.Post("/wallet/recharge", s.handleCreateRecharge)
 			r.Get("/wallet/recharges", s.handleListRecharges)
 			r.Get("/wallet/recharges/{order_no}", s.handleGetRecharge)
@@ -188,7 +228,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := s.iam.IssueSession(r.Context(), u.ID, r.UserAgent(), r.RemoteAddr)
+	// iam.sessions.client_ip is INET, so strip the port from RemoteAddr
+	// (Go always includes one); fall back to empty if the host parse fails.
+	clientIP := r.RemoteAddr
+	if h, _, splitErr := net.SplitHostPort(clientIP); splitErr == nil {
+		clientIP = h
+	}
+	sess, err := s.iam.IssueSession(r.Context(), u.ID, r.UserAgent(), clientIP)
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "issue session failed", "err", err, "user_id", u.ID)
 		httpx.Error(w, http.StatusInternalServerError, "internal_error", "cannot issue session")

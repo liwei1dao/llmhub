@@ -9,9 +9,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/llmhub/llmhub/internal/audit"
 	catalogrepo "github.com/llmhub/llmhub/internal/catalog/repo"
 	iamrepo "github.com/llmhub/llmhub/internal/iam/repo"
 	meteringrepo "github.com/llmhub/llmhub/internal/metering/repo"
+	"github.com/llmhub/llmhub/internal/pool"
 	poolrepo "github.com/llmhub/llmhub/internal/pool/repo"
 	"github.com/llmhub/llmhub/internal/wallet"
 	"github.com/llmhub/llmhub/pkg/httpx"
@@ -21,19 +23,29 @@ import (
 type Server struct {
 	logger   *slog.Logger
 	repo     *poolrepo.Repo
+	pool     *pool.Service // v0.2 service: vendor accounts, credentials, bindings
 	iam      *iamrepo.Repo
 	catalog  *catalogrepo.Repo
 	metering *meteringrepo.Repo
 	wallet   *wallet.Service
+	audit    audit.Recorder // optional; defaults to audit.Nop{}
 	token    string
 }
+
+// WithPool plugs in the v0.2 pool service.
+func (s *Server) WithPool(p *pool.Service) *Server { s.pool = p; return s }
 
 // New builds a Server. token is a shared secret checked against the
 // X-Admin-Token header; callers typically source it from env. M7 moves
 // this to role-based session auth.
 func New(logger *slog.Logger, repo *poolrepo.Repo, token string) *Server {
-	return &Server{logger: logger, repo: repo, token: token}
+	return &Server{logger: logger, repo: repo, token: token, audit: audit.Nop{}}
 }
+
+// WithAudit attaches an audit.Recorder so admin mutations get logged
+// to audit.logs. Without this, operations still succeed but no record
+// is kept — only acceptable in tests.
+func (s *Server) WithAudit(r audit.Recorder) *Server { s.audit = r; return s }
 
 // WithIAM plugs in the iam repo for user-admin endpoints.
 func (s *Server) WithIAM(r *iamrepo.Repo) *Server { s.iam = r; return s }
@@ -48,21 +60,82 @@ func (s *Server) WithMetering(r *meteringrepo.Repo) *Server { s.metering = r; re
 func (s *Server) WithWallet(w *wallet.Service) *Server { s.wallet = w; return s }
 
 // Mount registers /api/admin/* routes on r.
+//
+// 在「聚合 SDK 平台」模式下，admin 后台只剩 4 块：
+//   - 静态目录字典（catalog dict）— vendors / products / capabilities / categories
+//   - 上游凭据池（vendor accounts / credentials / bindings）
+//   - 平台 SKU + 定价（platform services / pricing）
+//   - 用户管理 + 充值确认 + 计量观察
+//
+// 老的 /pool/accounts、/providers、/pricing 端点跟着 v0.1 catalog/pool
+// 表一起在 Phase 9 里删除了（中间站时代的产物）。
 func (s *Server) Mount(r chi.Router) {
 	r.Route("/api/admin", func(r chi.Router) {
 		r.Use(s.requireToken)
-		r.Route("/pool/accounts", func(r chi.Router) {
-			r.Get("/", s.listAccounts)
-			r.Post("/", s.createAccount)
-			r.Get("/{id}", s.getAccount)
-			r.Patch("/{id}", s.patchAccount)
-			r.Delete("/{id}", s.archiveAccount)
+
+		// 静态目录字典（代码常量层）
+		r.Route("/catalog", func(r chi.Router) {
+			r.Get("/categories", s.listCategories)
+			r.Get("/vendors", s.listVendors)
+			r.Get("/products", s.listProducts)
+			r.Get("/capabilities", s.listCapabilities)
 		})
+
+		// 上游账号池（账户级别）
+		r.Route("/vendor-accounts", func(r chi.Router) {
+			r.Get("/", s.listVendorAccounts)
+			r.Post("/", s.createVendorAccount)
+			r.Get("/{id}", s.getVendorAccount)
+			r.Patch("/{id}", s.patchVendorAccount)
+			r.Delete("/{id}", s.archiveVendorAccount)
+		})
+
+		// 凭据 + 调度行（绑定）
+		r.Route("/credentials", func(r chi.Router) {
+			r.Get("/", s.listCredentials)
+			r.Post("/", s.createCredential)
+			r.Get("/{id}", s.getCredential)
+			r.Delete("/{id}", s.archiveCredential)
+			r.Post("/{id}/bindings", s.addBinding)
+			r.Get("/{id}/events", s.listCredentialEvents)
+		})
+
+		// 平台 SKU + 定价
+		r.Route("/platform-services", func(r chi.Router) {
+			r.Get("/", s.listPlatformServices)
+			r.Post("/", s.createPlatformService)
+			r.Patch("/{id}", s.patchPlatformService)
+			// 追加一行新起效价 → close 旧行 + insert 新行（事务）
+			r.Post("/{id}/pricing", s.updatePlatformServicePricing)
+		})
+
+		// 活 lease 监控 + 强制撤销
+		r.Route("/leases", func(r chi.Router) {
+			r.Get("/", s.listLeases)
+			r.Delete("/{lease_id}", s.revokeLease)
+		})
+
+		// 用户订阅（管理员代客开订 / 调配额 / 取消）
+		r.Route("/users/{id}/subscriptions", func(r chi.Router) {
+			r.Get("/", s.listUserSubscriptions)
+			r.Post("/", s.grantSubscription)
+		})
+		r.Route("/subscriptions", func(r chi.Router) {
+			r.Patch("/{id}", s.patchSubscription)
+			r.Delete("/{id}", s.cancelSubscription)
+		})
+
+		// 总览数据
+		r.Get("/dashboard/stats", s.dashboardStats)
+
+		// 审计日志
+		r.Get("/audit-logs", s.auditList)
+
+		// 用户 / 充值 / 对账
 		r.Get("/users", s.listUsers)
-		r.Get("/pricing", s.listPricing)
-		r.Get("/providers", s.listProviders)
+		r.Get("/users/{id}", s.getUser)
+		r.Get("/users/{id}/wallet", s.getUserWallet)
 		r.Get("/reconciliation", s.listRecon)
-		r.Get("/pool/accounts/{id}/events", s.listAccountEvents)
 		r.Post("/recharges/{order_no}/confirm", s.handleConfirmRecharge)
 	})
 }

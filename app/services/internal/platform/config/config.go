@@ -10,6 +10,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -98,8 +99,12 @@ func Load(service string) (*Config, error) {
 		}
 	}
 
-	// Env overlay
+	// Env overlay. LLMHUB_ENV takes precedence over the yaml `env:` key
+	// because AutomaticEnv() is registered later and won't be in effect yet.
 	env := v.GetString("env")
+	if e := os.Getenv("LLMHUB_ENV"); e != "" {
+		env = e
+	}
 	if env != "" {
 		v.SetConfigName("app." + env)
 		if err := v.MergeInConfig(); err != nil {

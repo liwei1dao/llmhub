@@ -9,7 +9,7 @@ export default function LogoutButton() {
     <button
       onClick={() => {
         setToken('');
-        router.push('/admin/login');
+        router.push('/login');
       }}
       className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink-500 transition hover:bg-ink-700 hover:text-ink-200"
     >

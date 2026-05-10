@@ -9,7 +9,7 @@ export default function RequireToken({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!getToken()) {
-      router.replace('/admin/login');
+      router.replace('/login');
       return;
     }
     setReady(true);
