@@ -32,10 +32,12 @@ jobs:
     # 不在 CI 里临时拉起 postgres/redis/nats —— 当前 *_test.go 全部
     # 是纯逻辑单测 + golden 协议一致性，零外部依赖。如果未来加集成
     # 测试，再按需放回 services 块。
+    #
+    # go.mod / Makefile 都在 app/services/ 下，所有 go 命令必须在该目录执行。
 
     defaults:
       run:
-        working-directory: app
+        working-directory: app/services
 
     steps:
       - name: 检出代码
