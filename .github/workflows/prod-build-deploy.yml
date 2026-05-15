@@ -90,8 +90,8 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - { name: api, ctx: app,     dockerfile: app/deploy/Dockerfile }
-          - { name: web, ctx: app/web, dockerfile: app/web/Dockerfile }
+          - { name: api, ctx: app/services, dockerfile: app/services/deploy/Dockerfile }
+          - { name: web, ctx: app/web,      dockerfile: app/web/Dockerfile }
 
     steps:
       - name: 检出 main
@@ -190,8 +190,8 @@ jobs:
           # docker-compose.yml 和 .env.example 每次都覆盖。
           # 真正的 .env（含 secret）由运维维护，CI 不触碰。
           scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
-            app/deploy/prod/docker-compose.yml \
-            app/deploy/prod/.env.example \
+            app/services/deploy/prod/docker-compose.yml \
+            app/services/deploy/prod/.env.example \
             "$USER_HOST:$DEPLOY_DIR/"
 
       - name: 拉镜像 + 滚动重启
