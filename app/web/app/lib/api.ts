@@ -5,7 +5,7 @@
 // Cookies are forwarded automatically (`credentials: include`) so the
 // session set by /auth/login persists across pages.
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8081';
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:18080';
 
 export type APIError = { code: string; message: string };
 
@@ -14,7 +14,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     method,
     credentials: 'include',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   });
   if (!res.ok) {
@@ -34,6 +34,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export const api = {
   get: <T,>(p: string) => call<T>('GET', p),
   post: <T,>(p: string, body?: unknown) => call<T>('POST', p, body),
+  delete: <T,>(p: string) => call<T>('DELETE', p),
 };
 
 // ---- types matching the Go handlers ----
@@ -83,4 +84,89 @@ export type Recharge = {
   channel: string;
   status: string;
   created_at: string;
+};
+
+// ───────────────────────── 服务订阅 + 配额观察 ─────────────────────────
+
+// 一行 = 一个有效订阅。后端把 SKU 元信息（display_name / billing_unit /
+// capability / 定价）一并 hydrate 进来，前端不用再请求 catalog。
+export type Subscription = {
+  id: number;
+  sku_id: string;
+  display_name?: string;
+  category_id?: string;
+  capability?: string;
+  upstream_model?: string;
+  billing_unit?: string;
+  plan_kind: string; // monthly / prepaid / trial
+  plan_name: string;
+  quota_total: number;
+  quota_used: number;
+  quota_remaining: number;
+  daily_used: number;
+  daily_used_date: string;
+  daily_quota_limit?: number;
+  qps_limit: number;
+  period_start: string;
+  period_end: string;
+  auto_renew: boolean;
+  input_per_unit_cents?: number;
+  output_per_unit_cents?: number;
+};
+
+// ───────────────────────── 服务目录（"可开通服务"模态用） ─────────────────────────
+
+// CatalogCategory / CatalogCapability / CatalogVendor 都来自代码常量
+// (catalog.Categories / Capabilities / Vendors)，跟随后端发布一起更新。
+export type CatalogCategory = { id: string; name: string };
+export type CatalogCapability = {
+  id: string;
+  category_id: string;
+  display_name: string;
+  billing_unit: string;
+};
+export type CatalogVendor = { id: string; name: string };
+
+// CatalogService 是 catalog.platform_services 的一行 + 静态字典里的
+// vendor / product 元信息，方便前端直接渲染。
+export type CatalogService = {
+  id: string;
+  display_name: string;
+  category_id: string;
+  vendor_product_id: string;
+  capability: string;
+  upstream_model?: string;
+  billing_unit: string;
+  status: string;
+  context_window?: number;
+  max_output_tokens?: number;
+  input_per_unit_cents?: number;
+  output_per_unit_cents?: number;
+  image_per_unit_cents?: number;
+  vendor_id?: string;
+  vendor_name?: string;
+  vendor_product_name?: string;
+  vendor_logo_url?: string;
+};
+
+export type ServiceCatalog = {
+  categories: CatalogCategory[];
+  capabilities: CatalogCapability[];
+  vendors: CatalogVendor[];
+  services: CatalogService[];
+};
+
+// ───────────────────────── SDK 下载清单 ─────────────────────────
+
+export type SDKRelease = {
+  language: string;
+  display_name: string;
+  version: string;
+  released_at: string;
+  download_url: string;
+  checksum: string;
+  api_base_url: string;
+  install_hint: string;
+  docs_url?: string;
+  status: 'active' | 'beta' | 'planned' | string;
 };

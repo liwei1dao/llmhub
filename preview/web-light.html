@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LLMHub Web · 亮色主题预览</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: {
+            50:  '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
+            400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151',
+            800: '#1f2937', 900: '#111827',
+          },
+          brand: {
+            50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+            400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+          },
+        },
+        fontFamily: { sans: ['Inter','PingFang SC','Microsoft YaHei','system-ui','sans-serif'] },
+      },
+    },
+  };
+</script>
+<style>
+  body { background:#f9fafb; color:#111827; font-family: Inter,'PingFang SC','Microsoft YaHei',system-ui,sans-serif; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+
+  /* tab radios */
+  input[name=screen] { display:none; }
+  .pane { display:none; }
+  #s-land:checked    ~ #stage > #p-land,
+  #s-login:checked   ~ #stage > #p-login,
+  #s-reg:checked     ~ #stage > #p-reg,
+  #s-dash:checked    ~ #stage > #p-dash,
+  #s-subs:checked    ~ #stage > #p-subs,
+  #s-keys:checked    ~ #stage > #p-keys,
+  #s-sdks:checked    ~ #stage > #p-sdks,
+  #s-wallet:checked  ~ #stage > #p-wallet,
+  #s-usage:checked   ~ #stage > #p-usage
+    { display:block; }
+  #s-land:checked   ~ .tabs label[for=s-land],
+  #s-login:checked  ~ .tabs label[for=s-login],
+  #s-reg:checked    ~ .tabs label[for=s-reg],
+  #s-dash:checked   ~ .tabs label[for=s-dash],
+  #s-subs:checked   ~ .tabs label[for=s-subs],
+  #s-keys:checked   ~ .tabs label[for=s-keys],
+  #s-sdks:checked   ~ .tabs label[for=s-sdks],
+  #s-wallet:checked ~ .tabs label[for=s-wallet],
+  #s-usage:checked  ~ .tabs label[for=s-usage]
+    { background:#111827; color:#fff; border-color:#111827; }
+
+  .glow {
+    background-image: radial-gradient(60% 60% at 50% 0%, rgba(59,130,246,.18), transparent 70%),
+                      radial-gradient(50% 50% at 80% 30%, rgba(217,70,239,.12), transparent 70%);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(17,24,39,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(17,24,39,.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(60% 60% at 50% 30%, #000 60%, transparent 100%);
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ==========  顶部说明  ========== -->
+<header class="border-b border-ink-200 bg-white">
+  <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+      <div>
+        <div class="text-sm font-semibold tracking-tight">LLMHub Web · 亮色主题预览</div>
+        <div class="text-xs text-ink-500">静态 mockup，与 <span class="mono">/app/web/</span> 真实组件 1:1 对齐</div>
+      </div>
+    </div>
+    <a href="admin-light.html" class="text-xs text-ink-500 hover:text-ink-800 underline">查看 Admin 后台预览</a>
+  </div>
+</header>
+
+<input type="radio" name="screen" id="s-land" checked />
+<input type="radio" name="screen" id="s-login" />
+<input type="radio" name="screen" id="s-reg" />
+<input type="radio" name="screen" id="s-dash" />
+<input type="radio" name="screen" id="s-subs" />
+<input type="radio" name="screen" id="s-keys" />
+<input type="radio" name="screen" id="s-sdks" />
+<input type="radio" name="screen" id="s-wallet" />
+<input type="radio" name="screen" id="s-usage" />
+
+<div class="tabs sticky top-0 z-20 border-b border-ink-200 bg-white">
+  <div class="mx-auto max-w-7xl px-6 py-3 flex flex-wrap gap-2 text-xs">
+    <label for="s-land"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">落地页</label>
+    <label for="s-login"  class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">登录</label>
+    <label for="s-reg"    class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">注册</label>
+    <label for="s-dash"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">控制台·总览</label>
+    <label for="s-subs"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">服务订阅</label>
+    <label for="s-keys"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">API Key</label>
+    <label for="s-sdks"   class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">SDK 下载</label>
+    <label for="s-wallet" class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">钱包</label>
+    <label for="s-usage"  class="cursor-pointer rounded-full border border-ink-200 bg-white px-3 py-1.5 transition hover:bg-ink-100">用量</label>
+  </div>
+</div>
+
+<div id="stage">
+
+  <!-- ==========  落地页  ========== -->
+  <section id="p-land" class="pane">
+    <header class="sticky top-[57px] z-10 border-b border-ink-200/60 bg-white/70 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div class="flex items-center gap-2">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="text-lg font-semibold tracking-tight">LLMHub</span>
+        </div>
+        <nav class="hidden items-center gap-7 text-sm text-ink-700 md:flex">
+          <a href="#">厂商</a><a href="#">能力</a><a href="#">定价</a><a href="#">文档</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <a href="#" class="hidden text-sm text-ink-700 md:inline">登录</a>
+          <a href="#" class="rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-ink-800">免费注册</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="glow relative overflow-hidden">
+      <div class="grid-bg absolute inset-0 opacity-60"></div>
+      <div class="relative mx-auto max-w-6xl px-6 py-24 md:py-28">
+        <div class="mx-auto max-w-3xl text-center">
+          <span class="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white/70 px-3 py-1 text-xs font-medium text-brand-700">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            7 家厂商已接入 · 协议层一次对齐
+          </span>
+          <h1 class="mt-6 text-5xl font-bold leading-tight tracking-tight md:text-6xl">
+            一次接入<br />
+            <span class="bg-gradient-to-r from-brand-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">全栈 AI 能力</span>
+            可用
+          </h1>
+          <p class="mt-6 text-lg text-ink-500 md:text-xl">
+            对话 · 语音 · 翻译 · 多模态 —— 用最简单的 SDK 调遍主流大模型厂商。<br class="hidden md:block" />
+            按量计费，无套餐门槛，毫秒级故障切换。
+          </p>
+          <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <a href="#" class="rounded-xl bg-ink-900 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-ink-800">立即开始 →</a>
+            <a href="#" class="rounded-xl border border-ink-200 bg-white px-6 py-3 text-sm font-medium text-ink-800 hover:bg-ink-50">阅读文档</a>
+          </div>
+          <pre class="mono mt-12 overflow-x-auto rounded-2xl border border-ink-200 bg-ink-900 p-6 text-left text-sm leading-relaxed text-ink-200 shadow-xl"><code>from llmhub import Hub
+
+hub = Hub(api_key="lmh_********************")
+sku = hub.subscriptions["chat.standard"]
+
+for chunk in sku.chat.completions.stream(
+    model="deepseek-chat",
+    messages=[{"role": "user", "content": "你好"}],
+):
+    print(chunk.delta, end="")</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="border-t border-ink-200/60 bg-white py-20">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="mx-auto max-w-3xl text-center">
+          <div class="text-xs font-medium uppercase tracking-wider text-brand-600">覆盖厂商</div>
+          <h2 class="mt-2 text-3xl font-bold tracking-tight md:text-4xl">主流大模型厂商，一站式调度</h2>
+          <p class="mt-3 text-base text-ink-500">出问题自动切换，账单按毛利对账，避免单点。</p>
+        </div>
+        <div class="mt-12 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+          <!-- 厂商卡 -->
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-sm font-semibold text-white">火</div>
+            <div class="text-sm font-medium">火山方舟</div>
+            <div class="mt-0.5 text-xs text-ink-500">Volcengine Ark</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-sm font-semibold text-white">D</div>
+            <div class="text-sm font-medium">DeepSeek</div>
+            <div class="mt-0.5 text-xs text-ink-500">深度求索</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-semibold text-white">A</div>
+            <div class="text-sm font-medium">Anthropic</div>
+            <div class="mt-0.5 text-xs text-ink-500">Claude 系列</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-sm font-semibold text-white">阿</div>
+            <div class="text-sm font-medium">阿里百炼</div>
+            <div class="mt-0.5 text-xs text-ink-500">DashScope</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-sm font-semibold text-white">D</div>
+            <div class="text-sm font-medium">DeepL</div>
+            <div class="mt-0.5 text-xs text-ink-500">翻译</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500 text-sm font-semibold text-white">E</div>
+            <div class="text-sm font-medium">ElevenLabs</div>
+            <div class="mt-0.5 text-xs text-ink-500">TTS</div>
+          </div>
+          <div class="group rounded-xl border border-ink-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 text-sm font-semibold text-white">D</div>
+            <div class="text-sm font-medium">Deepgram</div>
+            <div class="mt-0.5 text-xs text-ink-500">ASR</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-ink-900/[0.02] py-20">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="mx-auto max-w-3xl text-center">
+          <div class="text-xs font-medium uppercase tracking-wider text-brand-600">能力域</div>
+          <h2 class="mt-2 text-3xl font-bold tracking-tight md:text-4xl">按能力域抽象，无需关心底层差异</h2>
+          <p class="mt-3 text-base text-ink-500">LLMHub 在协议层做了厂商对齐，业务方只对接一套 SDK。</p>
+        </div>
+        <div class="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">对话 / 推理</div><p class="mt-2 text-sm text-ink-500">OpenAI / Anthropic 协议兼容，SSE 流式转发，token 实时计费。</p></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">向量化</div><p class="mt-2 text-sm text-ink-500">统一 dimension / batch 接口，支持火山、DeepSeek、阿里。</p></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">翻译</div><p class="mt-2 text-sm text-ink-500">语种自动识别，多家厂商灰度路由，跨厂商质量比对。</p></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">语音识别</div><p class="mt-2 text-sm text-ink-500">WebSocket / 长音频，按音频秒数计费。</p></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">语音合成</div><p class="mt-2 text-sm text-ink-500">SSML、克隆音色，按字符数 / 音频秒数计费。</p></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6"><div class="text-base font-semibold">多模态</div><p class="mt-2 text-sm text-ink-500">图像理解 / 视觉对话，规划中。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="border-t border-ink-200/60 bg-white py-20">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="mx-auto max-w-3xl text-center">
+          <div class="text-xs font-medium uppercase tracking-wider text-brand-600">计费</div>
+          <h2 class="mt-2 text-3xl font-bold tracking-tight md:text-4xl">按量计费，无套餐门槛</h2>
+          <p class="mt-3 text-base text-ink-500">账单透明、可对账、可导出。</p>
+        </div>
+        <div class="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div class="rounded-2xl border border-ink-200 bg-white p-6">
+            <div class="text-sm font-medium text-ink-500">入门</div>
+            <div class="mt-2 text-3xl font-bold tracking-tight">¥0 起充</div>
+            <ul class="mt-6 space-y-2 text-sm text-ink-700">
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>共享池调度</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>20 QPS</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>邮件支持</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>所有公开模型</span></li>
+            </ul>
+            <a href="#" class="mt-8 block rounded-xl border border-ink-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800 hover:bg-ink-50">立即开通</a>
+          </div>
+          <div class="rounded-2xl border border-brand-500 bg-white p-6 shadow-lg shadow-brand-500/10">
+            <div class="text-sm font-medium text-ink-500">增长</div>
+            <div class="mt-2 text-3xl font-bold tracking-tight">¥1,000/月起</div>
+            <ul class="mt-6 space-y-2 text-sm text-ink-700">
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>专属调度优先级</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>200 QPS</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>工单 + 群</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>SLA 99.9%</span></li>
+            </ul>
+            <a href="#" class="mt-8 block rounded-xl bg-ink-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-ink-800">立即开通</a>
+          </div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-6">
+            <div class="text-sm font-medium text-ink-500">企业</div>
+            <div class="mt-2 text-3xl font-bold tracking-tight">商务定制</div>
+            <ul class="mt-6 space-y-2 text-sm text-ink-700">
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>专属账号池</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>不限 QPS</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>独立 VPC / 私有部署</span></li>
+              <li class="flex items-start gap-2"><span class="mt-0.5 text-brand-600">✓</span><span>24×7 支持 + SLA 99.99%</span></li>
+            </ul>
+            <a href="#" class="mt-8 block rounded-xl border border-ink-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800 hover:bg-ink-50">立即开通</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-ink-900 py-20 text-white">
+      <div class="mx-auto max-w-4xl px-6 text-center">
+        <h2 class="text-3xl font-bold tracking-tight md:text-4xl">几分钟接通你的第一次调用</h2>
+        <p class="mt-4 text-ink-200">注册即送测试额度，文档与样例代码开箱即用。</p>
+        <a href="#" class="mt-8 inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-ink-200">免费创建 API Key</a>
+      </div>
+    </section>
+
+    <footer class="border-t border-ink-200 bg-white py-10 text-sm text-ink-500">
+      <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-6 md:flex-row md:items-center">
+        <div>© 2026 LLMHub · AI 能力聚合 SDK</div>
+        <div class="flex gap-5"><a href="#">文档</a><a href="#">服务条款</a><a href="#">隐私</a></div>
+      </div>
+    </footer>
+  </section>
+
+  <!-- ==========  登录  ========== -->
+  <section id="p-login" class="pane">
+    <div class="grid min-h-[calc(100vh-118px)] place-items-center bg-gradient-to-br from-white via-slate-50 to-blue-50 px-6 py-12">
+      <div class="w-full max-w-md">
+        <div class="mb-8 flex items-center gap-2">
+          <span class="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-base font-semibold text-white">L</span>
+          <span class="text-xl font-semibold tracking-tight">LLMHub</span>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-8 shadow-sm">
+          <h1 class="text-2xl font-bold tracking-tight">登录到 LLMHub</h1>
+          <p class="mt-1 text-sm text-ink-500">使用注册时的邮箱与密码登录控制台。</p>
+          <div class="mt-6 space-y-4">
+            <label class="block">
+              <span class="text-sm font-medium text-ink-700">邮箱</span>
+              <input type="email" value="dev@acme.com" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-brand-500/30 transition focus:border-brand-500 focus:ring-2" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-ink-700">密码</span>
+              <input type="password" value="••••••••" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-brand-500/30 transition focus:border-brand-500 focus:ring-2" />
+            </label>
+            <button class="w-full rounded-lg bg-ink-900 py-2.5 text-sm font-medium text-white hover:bg-ink-800">登录</button>
+          </div>
+          <div class="mt-6 text-sm text-ink-500">
+            还没有账号? <a href="#" class="font-medium text-brand-600 hover:underline">立即注册</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========  注册  ========== -->
+  <section id="p-reg" class="pane">
+    <div class="grid min-h-[calc(100vh-118px)] place-items-center bg-gradient-to-br from-white via-slate-50 to-blue-50 px-6 py-12">
+      <div class="w-full max-w-md">
+        <div class="mb-8 flex items-center gap-2">
+          <span class="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-base font-semibold text-white">L</span>
+          <span class="text-xl font-semibold tracking-tight">LLMHub</span>
+        </div>
+        <div class="rounded-2xl border border-ink-200 bg-white p-8 shadow-sm">
+          <h1 class="text-2xl font-bold tracking-tight">创建 LLMHub 账户</h1>
+          <p class="mt-1 text-sm text-ink-500">注册即送测试额度，几秒钟内开始第一次调用。</p>
+          <div class="mt-6 space-y-4">
+            <label class="block">
+              <span class="text-sm font-medium text-ink-700">邮箱</span>
+              <input type="email" placeholder="you@example.com" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-ink-700">昵称（可选）</span>
+              <input type="text" placeholder="Lin" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-ink-700">密码</span>
+              <input type="password" placeholder="" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+              <span class="mt-1 block text-xs text-ink-500">至少 8 位</span>
+            </label>
+            <button class="w-full rounded-lg bg-ink-900 py-2.5 text-sm font-medium text-white hover:bg-ink-800">注册并登录</button>
+          </div>
+          <div class="mt-6 text-sm text-ink-500">
+            已有账户? <a href="#" class="font-medium text-brand-600 hover:underline">直接登录</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========  控制台 layout  ========== -->
+  <!-- 复用：sidebar + main，每个 pane 自己包一层（侧栏当前项高亮不一样） -->
+
+  <!-- ==========  总览  ========== -->
+  <section id="p-dash" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">总览</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">服务订阅</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">API Key</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">SDK 下载</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">钱包</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">用量</div>
+        </nav>
+        <div class="mt-8 border-t border-ink-200 pt-4">
+          <button class="text-sm text-ink-500 hover:text-ink-800">退出登录</button>
+        </div>
+      </aside>
+      <main class="flex-1 space-y-8 px-6 py-8 md:px-10">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">总览</h1>
+          <p class="mt-1 text-sm text-ink-500">dev@acme.com · QPS 限额 50</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">可用余额</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 482.30</div><div class="mt-1 text-xs text-ink-500">冻结 ¥ 0.00</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">累计充值</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 1,000.00</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">近 7 天调用</div><div class="mt-2 text-2xl font-semibold tracking-tight">12,438</div><div class="mt-1 text-xs text-ink-500">Token 4,210,892</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">近 7 天消费</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 517.70</div></div>
+        </div>
+        <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+          <div class="border-b border-ink-200 px-5 py-3 text-sm font-medium">近 7 天用量</div>
+          <table class="w-full text-sm">
+            <thead class="bg-ink-200/30 text-xs uppercase tracking-wider text-ink-500">
+              <tr>
+                <th class="px-5 py-2.5 text-left">日期</th>
+                <th class="px-5 py-2.5 text-left">能力</th>
+                <th class="px-5 py-2.5 text-right">调用</th>
+                <th class="px-5 py-2.5 text-right">成功</th>
+                <th class="px-5 py-2.5 text-right">Token</th>
+                <th class="px-5 py-2.5 text-right">消费</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-11</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">2,138</td><td class="px-5 py-2.5 text-right">2,131</td><td class="px-5 py-2.5 text-right">718,233</td><td class="px-5 py-2.5 text-right">¥ 89.10</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-11</td><td class="px-5 py-2.5">translate</td><td class="px-5 py-2.5 text-right">412</td><td class="px-5 py-2.5 text-right">412</td><td class="px-5 py-2.5 text-right">36,401</td><td class="px-5 py-2.5 text-right">¥ 6.80</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-10</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,872</td><td class="px-5 py-2.5 text-right">1,870</td><td class="px-5 py-2.5 text-right">621,005</td><td class="px-5 py-2.5 text-right">¥ 77.40</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-10</td><td class="px-5 py-2.5">tts</td><td class="px-5 py-2.5 text-right">98</td><td class="px-5 py-2.5 text-right">98</td><td class="px-5 py-2.5 text-right">12,400</td><td class="px-5 py-2.5 text-right">¥ 4.20</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-09</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,654</td><td class="px-5 py-2.5 text-right">1,651</td><td class="px-5 py-2.5 text-right">554,891</td><td class="px-5 py-2.5 text-right">¥ 68.90</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-09</td><td class="px-5 py-2.5">asr</td><td class="px-5 py-2.5 text-right">221</td><td class="px-5 py-2.5 text-right">221</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 18.30</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ==========  服务订阅  ========== -->
+  <section id="p-subs" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">总览</div>
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">服务订阅</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">API Key</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">SDK 下载</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">钱包</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">用量</div>
+        </nav>
+      </aside>
+      <main class="flex-1 space-y-6 px-6 py-8 md:px-10">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">服务订阅</h1>
+          <p class="mt-1 text-sm text-ink-500">已订阅的服务（SKU）+ 当前周期内的配额使用情况。SDK 用 API Key + sku_id 调 <code class="mono rounded bg-ink-200/50 px-1">/sdk/credentials/issue</code> 时，会按这里的配额做准入校验。</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+          <div class="rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">对话标准包</div>
+                <div class="mono text-[11px] text-ink-500">chat.standard</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700">包月</span>
+            </div>
+            <div class="mt-3 text-xs text-ink-500">月度套餐 · chat · 单位 token</div>
+            <div class="mt-4 space-y-3">
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">周期内配额</span><span class="mono text-ink-500">3,210,540 / 5,000,000 token</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-amber-500" style="width:64%"></div></div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">今日配额</span><span class="mono text-ink-500">418,201 / 500,000 token</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-rose-500" style="width:84%"></div></div>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3 border-t border-ink-200 pt-3 text-[11px] text-ink-500">
+              <div><div class="text-ink-400">周期</div><div class="text-ink-700">2026-05-01 → 2026-05-31</div></div>
+              <div><div class="text-ink-400">QPS 上限</div><div class="text-ink-700">50</div></div>
+              <div><div class="text-ink-400">单价（输入）</div><div class="text-ink-700">0.30 分</div></div>
+              <div><div class="text-ink-400">单价（输出）</div><div class="text-ink-700">0.60 分</div></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">语音合成 · 预付费</div>
+                <div class="mono text-[11px] text-ink-500">tts.prepaid</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-medium text-fuchsia-700">预付费</span>
+            </div>
+            <div class="mt-3 text-xs text-ink-500">预付费包 · tts · 单位 字符</div>
+            <div class="mt-4 space-y-3">
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">周期内配额</span><span class="mono text-ink-500">120,540 / 1,000,000 字符</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-emerald-500" style="width:12%"></div></div>
+              </div>
+              <div class="text-[11px] text-ink-500">每日配额：不限</div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3 border-t border-ink-200 pt-3 text-[11px] text-ink-500">
+              <div><div class="text-ink-400">周期</div><div class="text-ink-700">2026-04-12 → 2026-07-12</div></div>
+              <div><div class="text-ink-400">QPS 上限</div><div class="text-ink-700">20</div></div>
+              <div><div class="text-ink-400">单价（输出）</div><div class="text-ink-700">0.80 分</div></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">翻译 · 试用</div>
+                <div class="mono text-[11px] text-ink-500">translate.trial</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">试用</span>
+            </div>
+            <div class="mt-3 text-xs text-ink-500">试用包 · translate · 单位 字符</div>
+            <div class="mt-4 space-y-3">
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">周期内配额</span><span class="mono text-ink-500">42,108 / 50,000 字符</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-rose-500" style="width:84%"></div></div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">今日配额</span><span class="mono text-ink-500">4,300 / 5,000 字符</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-amber-500" style="width:86%"></div></div>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3 border-t border-ink-200 pt-3 text-[11px] text-ink-500">
+              <div><div class="text-ink-400">周期</div><div class="text-ink-700">2026-05-01 → 2026-05-14</div></div>
+              <div><div class="text-ink-400">QPS 上限</div><div class="text-ink-700">5</div></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">语音识别 · 预付费</div>
+                <div class="mono text-[11px] text-ink-500">asr.prepaid</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-medium text-fuchsia-700">预付费</span>
+            </div>
+            <div class="mt-3 text-xs text-ink-500">预付费包 · asr · 单位 秒</div>
+            <div class="mt-4 space-y-3">
+              <div>
+                <div class="flex items-baseline justify-between text-xs"><span class="text-ink-700">周期内配额</span><span class="mono text-ink-500">2,140 / 50,000 秒</span></div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-200/60"><div class="h-full bg-emerald-500" style="width:4%"></div></div>
+              </div>
+              <div class="text-[11px] text-ink-500">每日配额：不限</div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3 border-t border-ink-200 pt-3 text-[11px] text-ink-500">
+              <div><div class="text-ink-400">周期</div><div class="text-ink-700">2026-04-12 → 2026-07-12</div></div>
+              <div><div class="text-ink-400">QPS 上限</div><div class="text-ink-700">10</div></div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ==========  API Key  ========== -->
+  <section id="p-keys" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">总览</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">服务订阅</div>
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">API Key</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">SDK 下载</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">钱包</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">用量</div>
+        </nav>
+      </aside>
+      <main class="flex-1 space-y-6 px-6 py-8 md:px-10">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">API Key</h1>
+          <p class="mt-1 text-sm text-ink-500">在请求头里携带 <code class="mono rounded bg-ink-200/50 px-1">Authorization: Bearer &lt;key&gt;</code>。</p>
+        </div>
+
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+          <div class="text-sm font-semibold text-amber-900">key 仅显示一次，请妥善保存：</div>
+          <div class="mono mt-2 break-all rounded-lg bg-white px-3 py-2 text-sm text-amber-900">lmh_live_8f3c91a2e64a4e58b1d7f3a2c8e9b0d147a2f3e8b9c1d0a4f5e6b7c8d9e0f1a2</div>
+          <button class="mt-3 text-sm text-amber-900 underline">我已复制</button>
+        </div>
+
+        <form class="flex items-end gap-3 rounded-2xl border border-ink-200 bg-white p-5">
+          <label class="flex-1">
+            <span class="text-sm font-medium text-ink-700">名称</span>
+            <input value="" placeholder="e.g. prod-app / local-dev" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+          </label>
+          <button type="button" class="rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white hover:bg-ink-800">创建新 Key</button>
+        </form>
+
+        <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+          <table class="w-full text-sm">
+            <thead class="bg-ink-200/30 text-xs uppercase tracking-wider text-ink-500">
+              <tr>
+                <th class="px-5 py-2.5 text-left">名称</th>
+                <th class="px-5 py-2.5 text-left">前缀</th>
+                <th class="px-5 py-2.5 text-left">权限</th>
+                <th class="px-5 py-2.5 text-left">状态</th>
+                <th class="px-5 py-2.5 text-left">创建时间</th>
+                <th class="px-5 py-2.5 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr>
+                <td class="px-5 py-2.5">prod-app</td>
+                <td class="px-5 py-2.5 mono">lmh_live_8f3c…</td>
+                <td class="px-5 py-2.5 text-ink-500">chat:read, chat:write</td>
+                <td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+                <td class="px-5 py-2.5 text-ink-500">2026-05-11 14:02</td>
+                <td class="px-5 py-2.5 text-right"><button class="rounded-lg border border-rose-300 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50">撤销</button></td>
+              </tr>
+              <tr>
+                <td class="px-5 py-2.5">local-dev</td>
+                <td class="px-5 py-2.5 mono">lmh_live_3a91…</td>
+                <td class="px-5 py-2.5 text-ink-500">chat:read, chat:write</td>
+                <td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">active</span></td>
+                <td class="px-5 py-2.5 text-ink-500">2026-04-30 09:18</td>
+                <td class="px-5 py-2.5 text-right"><button class="rounded-lg border border-rose-300 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50">撤销</button></td>
+              </tr>
+              <tr>
+                <td class="px-5 py-2.5">old-staging</td>
+                <td class="px-5 py-2.5 mono">lmh_live_b0e2…</td>
+                <td class="px-5 py-2.5 text-ink-500">chat:read</td>
+                <td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">revoked</span></td>
+                <td class="px-5 py-2.5 text-ink-500">2026-03-21 11:45</td>
+                <td class="px-5 py-2.5 text-right"><span class="text-xs text-ink-400">—</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ==========  SDK 下载  ========== -->
+  <section id="p-sdks" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">总览</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">服务订阅</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">API Key</div>
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">SDK 下载</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">钱包</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">用量</div>
+        </nav>
+      </aside>
+      <main class="flex-1 space-y-6 px-6 py-8 md:px-10">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">SDK 下载</h1>
+          <p class="mt-1 text-sm text-ink-500">
+            每个语言的 SDK 都自带防逆向编译。运行时用本账号的 API Key 调
+            <code class="mono mx-1 rounded bg-ink-200/50 px-1">/sdk/credentials/issue</code>
+            换取上游凭据，进程退出即清理 — 用户代码看不到真实第三方 key。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Python</div>
+                <div class="mono text-[11px] text-ink-500">python · v0.4.1</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">正式</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">pip install llmhub</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+              <div>
+                <div class="text-ink-400">SHA-256</div>
+                <code class="mono mt-1 block break-all text-[10px] text-ink-500">8f3c91a2e64a4e58b1d7f3a2c8e9b0d147a2f3e8b9c1d0a4f5e6b7c8d9e0f1a2</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <a href="#" class="rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-ink-700">下载</a>
+              <a href="#" class="rounded-lg border border-ink-300 px-3 py-1.5 text-xs hover:bg-ink-200/40">文档</a>
+            </div>
+          </div>
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Node.js / TypeScript</div>
+                <div class="mono text-[11px] text-ink-500">node · v0.3.0</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">正式</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">npm install @llmhub/sdk</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <a href="#" class="rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-ink-700">下载</a>
+              <a href="#" class="rounded-lg border border-ink-300 px-3 py-1.5 text-xs hover:bg-ink-200/40">文档</a>
+            </div>
+          </div>
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Go</div>
+                <div class="mono text-[11px] text-ink-500">go · v0.2.0-beta.3</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">Beta</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">go get github.com/llmhub/sdk-go</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <a href="#" class="rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-ink-700">下载</a>
+              <a href="#" class="rounded-lg border border-ink-300 px-3 py-1.5 text-xs hover:bg-ink-200/40">文档</a>
+            </div>
+          </div>
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Dart / Flutter</div>
+                <div class="mono text-[11px] text-ink-500">dart · v0.0.0</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-ink-200 px-2 py-0.5 text-[11px] font-medium text-ink-500">规划中</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">dart pub add llmhub  # 即将发布</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <span class="rounded-lg bg-ink-200 px-3 py-1.5 text-xs text-ink-500">未发布</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Java</div>
+                <div class="mono text-[11px] text-ink-500">java · v0.0.0</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-ink-200 px-2 py-0.5 text-[11px] font-medium text-ink-500">规划中</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">implementation "io.llmhub:sdk:0.1.0"</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <span class="rounded-lg bg-ink-200 px-3 py-1.5 text-xs text-ink-500">未发布</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col rounded-2xl border border-ink-200 bg-white p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">Rust</div>
+                <div class="mono text-[11px] text-ink-500">rust · v0.0.0</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full bg-ink-200 px-2 py-0.5 text-[11px] font-medium text-ink-500">规划中</span>
+            </div>
+            <div class="mt-4 grow space-y-3 text-xs">
+              <div>
+                <div class="text-ink-400">安装</div>
+                <div class="mt-1 flex items-center gap-2">
+                  <code class="mono grow break-all rounded-lg bg-ink-200/40 px-2 py-1.5">cargo add llmhub</code>
+                  <button class="rounded-lg border border-ink-300 px-2 py-1.5 text-[11px] hover:bg-ink-200/40">复制</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-ink-400">API Base URL（已自动配置）</div>
+                <code class="mono mt-1 block break-all rounded-lg bg-ink-200/40 px-2 py-1.5">https://api.llmhub.io</code>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 border-t border-ink-200 pt-3">
+              <span class="rounded-lg bg-ink-200 px-3 py-1.5 text-xs text-ink-500">未发布</span>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ==========  钱包  ========== -->
+  <section id="p-wallet" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">总览</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">服务订阅</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">API Key</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">SDK 下载</div>
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">钱包</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">用量</div>
+        </nav>
+      </aside>
+      <main class="flex-1 space-y-8 px-6 py-8 md:px-10">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">钱包</h1>
+          <p class="mt-1 text-sm text-ink-500">所有调用按毛利计费，余额不足将拒绝新请求。</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="rounded-2xl border border-brand-500 bg-gradient-to-br from-white to-brand-50 p-5 shadow-sm"><div class="text-sm text-ink-500">可用余额</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 482.30</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">冻结金额</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 0.00</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm"><div class="text-sm text-ink-500">累计消费</div><div class="mt-2 text-2xl font-semibold tracking-tight">¥ 517.70</div></div>
+        </div>
+
+        <form class="rounded-2xl border border-ink-200 bg-white p-5">
+          <div class="text-sm font-semibold">创建充值订单</div>
+          <p class="mt-1 text-xs text-ink-500">MVP 阶段为人工对账模式：生成订单 → 付款 → 运营在 Admin 后台确认到账。</p>
+          <div class="mt-4 flex flex-wrap items-end gap-3">
+            <label class="flex-1 min-w-[160px]">
+              <span class="text-sm font-medium text-ink-700">金额（元）</span>
+              <input type="number" value="100" class="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+            </label>
+            <button type="button" class="rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white hover:bg-ink-800">生成订单</button>
+          </div>
+          <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            订单已生成 · 单号 <span class="mono">R20260511140218</span> · 状态 pending
+          </div>
+        </form>
+
+        <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+          <div class="border-b border-ink-200 px-5 py-3 text-sm font-medium">充值记录</div>
+          <table class="w-full text-sm">
+            <thead class="bg-ink-200/30 text-xs uppercase tracking-wider text-ink-500">
+              <tr>
+                <th class="px-5 py-2.5 text-left">订单号</th>
+                <th class="px-5 py-2.5 text-right">金额</th>
+                <th class="px-5 py-2.5 text-left">渠道</th>
+                <th class="px-5 py-2.5 text-left">状态</th>
+                <th class="px-5 py-2.5 text-left">时间</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-5 py-2.5 mono">R20260511140218</td><td class="px-5 py-2.5 text-right">¥ 100.00</td><td class="px-5 py-2.5">manual</td><td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">pending</span></td><td class="px-5 py-2.5 text-ink-500">2026-05-11 14:02</td></tr>
+              <tr><td class="px-5 py-2.5 mono">R20260430091845</td><td class="px-5 py-2.5 text-right">¥ 500.00</td><td class="px-5 py-2.5">manual</td><td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">paid</span></td><td class="px-5 py-2.5 text-ink-500">2026-04-30 09:18</td></tr>
+              <tr><td class="px-5 py-2.5 mono">R20260412101133</td><td class="px-5 py-2.5 text-right">¥ 500.00</td><td class="px-5 py-2.5">manual</td><td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">paid</span></td><td class="px-5 py-2.5 text-ink-500">2026-04-12 10:11</td></tr>
+              <tr><td class="px-5 py-2.5 mono">R20260321114512</td><td class="px-5 py-2.5 text-right">¥ 200.00</td><td class="px-5 py-2.5">manual</td><td class="px-5 py-2.5"><span class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">cancelled</span></td><td class="px-5 py-2.5 text-ink-500">2026-03-21 11:45</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ==========  用量  ========== -->
+  <section id="p-usage" class="pane">
+    <div class="flex min-h-[calc(100vh-118px)]">
+      <aside class="hidden w-60 shrink-0 border-r border-ink-200 bg-white px-4 py-6 md:block">
+        <div class="flex items-center gap-2 px-2 pb-6">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-fuchsia-600 text-sm font-semibold text-white">L</span>
+          <span class="font-semibold tracking-tight">Console</span>
+        </div>
+        <nav class="space-y-1 text-sm">
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">总览</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">服务订阅</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">API Key</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">SDK 下载</div>
+          <div class="block rounded-lg px-3 py-2 text-ink-700 hover:bg-ink-200/40">钱包</div>
+          <div class="block rounded-lg bg-ink-900 px-3 py-2 text-white">用量</div>
+        </nav>
+      </aside>
+      <main class="flex-1 space-y-6 px-6 py-8 md:px-10">
+        <div class="flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight">用量</h1>
+            <p class="mt-1 text-sm text-ink-500">按日聚合，按能力域分组。</p>
+          </div>
+          <div class="inline-flex rounded-lg border border-ink-200 bg-white p-1 text-sm">
+            <button class="rounded-md px-3 py-1 text-ink-700 hover:bg-ink-200/40">昨日</button>
+            <button class="rounded-md bg-ink-900 px-3 py-1 text-white">7 天</button>
+            <button class="rounded-md px-3 py-1 text-ink-700 hover:bg-ink-200/40">30 天</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="rounded-2xl border border-ink-200 bg-white p-5"><div class="text-sm text-ink-500">chat</div><div class="mt-2 text-2xl font-semibold">9,872</div><div class="mt-1 text-xs text-ink-500">合计 ¥ 412.30</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5"><div class="text-sm text-ink-500">translate</div><div class="mt-2 text-2xl font-semibold">1,841</div><div class="mt-1 text-xs text-ink-500">合计 ¥ 28.10</div></div>
+          <div class="rounded-2xl border border-ink-200 bg-white p-5"><div class="text-sm text-ink-500">tts</div><div class="mt-2 text-2xl font-semibold">312</div><div class="mt-1 text-xs text-ink-500">合计 ¥ 14.20</div></div>
+        </div>
+
+        <div class="overflow-hidden rounded-2xl border border-ink-200 bg-white">
+          <table class="w-full text-sm">
+            <thead class="bg-ink-200/30 text-xs uppercase tracking-wider text-ink-500">
+              <tr>
+                <th class="px-5 py-2.5 text-left">日期</th>
+                <th class="px-5 py-2.5 text-left">能力</th>
+                <th class="px-5 py-2.5 text-right">调用</th>
+                <th class="px-5 py-2.5 text-right">成功</th>
+                <th class="px-5 py-2.5 text-right">Token In</th>
+                <th class="px-5 py-2.5 text-right">Token Out</th>
+                <th class="px-5 py-2.5 text-right">音频秒</th>
+                <th class="px-5 py-2.5 text-right">字符</th>
+                <th class="px-5 py-2.5 text-right">消费</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-ink-200">
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-11</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">2,138</td><td class="px-5 py-2.5 text-right">2,131</td><td class="px-5 py-2.5 text-right">441,202</td><td class="px-5 py-2.5 text-right">277,031</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 89.10</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-11</td><td class="px-5 py-2.5">translate</td><td class="px-5 py-2.5 text-right">412</td><td class="px-5 py-2.5 text-right">412</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">36,401</td><td class="px-5 py-2.5 text-right">¥ 6.80</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-10</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,872</td><td class="px-5 py-2.5 text-right">1,870</td><td class="px-5 py-2.5 text-right">381,302</td><td class="px-5 py-2.5 text-right">239,703</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 77.40</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-10</td><td class="px-5 py-2.5">tts</td><td class="px-5 py-2.5 text-right">98</td><td class="px-5 py-2.5 text-right">98</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">12,400</td><td class="px-5 py-2.5 text-right">¥ 4.20</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-09</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,654</td><td class="px-5 py-2.5 text-right">1,651</td><td class="px-5 py-2.5 text-right">341,002</td><td class="px-5 py-2.5 text-right">213,889</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 68.90</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-09</td><td class="px-5 py-2.5">asr</td><td class="px-5 py-2.5 text-right">221</td><td class="px-5 py-2.5 text-right">221</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">3,420</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 18.30</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-08</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,433</td><td class="px-5 py-2.5 text-right">1,431</td><td class="px-5 py-2.5 text-right">295,832</td><td class="px-5 py-2.5 text-right">186,201</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 59.30</td></tr>
+              <tr><td class="px-5 py-2.5 mono text-ink-700">2026-05-07</td><td class="px-5 py-2.5">chat</td><td class="px-5 py-2.5 text-right">1,201</td><td class="px-5 py-2.5 text-right">1,199</td><td class="px-5 py-2.5 text-right">248,108</td><td class="px-5 py-2.5 text-right">155,032</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">—</td><td class="px-5 py-2.5 text-right">¥ 49.70</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

@@ -41,6 +41,7 @@ type Server struct {
 	sdk      *sdkapi.Server // optional: /sdk/* (聚合 SDK 凭据下发)
 	subs     *iamrepo.SubscriptionRepo // optional: 用户订阅 + 配额观察
 	catalog  *catalog.Service          // optional: SKU 元数据装填
+	verifier *Verifier                 // optional: 邮箱验证码 (Redis + SMTP)
 	mux      http.Handler
 	pinger   Pinger
 }
@@ -106,6 +107,15 @@ func (s *Server) WithCatalog(c *catalog.Service) *Server {
 	return s
 }
 
+// WithVerifier turns on email-verification for /auth/register. When
+// not called, register stays in its legacy "email + password is enough"
+// mode — convenient for tests and for ops that haven't wired SMTP yet.
+func (s *Server) WithVerifier(v *Verifier) *Server {
+	s.verifier = v
+	s.mux = s.routes()
+	return s
+}
+
 // Handler returns the composed http.Handler (router + middleware).
 func (s *Server) Handler() http.Handler { return s.mux }
 
@@ -128,6 +138,7 @@ func (s *Server) routes() http.Handler {
 	}
 
 	r.Route("/api/user", func(r chi.Router) {
+		r.Post("/auth/send-code", s.handleSendCode)
 		r.Post("/auth/register", s.handleRegister)
 		r.Post("/auth/login", s.handleLogin)
 		r.Post("/auth/logout", s.handleLogout)
@@ -142,7 +153,10 @@ func (s *Server) routes() http.Handler {
 			r.Post("/api-keys", s.handleCreateAPIKey)
 			r.Delete("/api-keys/{id}", s.handleRevokeAPIKey)
 			r.Get("/subscriptions", s.handleListSubscriptions)
+			r.Post("/subscriptions/activate", s.handleActivateService)
+			r.Get("/services/catalog", s.handleServiceCatalog)
 			r.Get("/sdk/downloads", s.handleSDKDownloads)
+			r.Post("/sdk-test/chat", s.handleSDKTestChat)
 			r.Post("/wallet/recharge", s.handleCreateRecharge)
 			r.Get("/wallet/recharges", s.handleListRecharges)
 			r.Get("/wallet/recharges/{order_no}", s.handleGetRecharge)
@@ -171,11 +185,49 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 
 // -------- auth --------
 
+type sendCodeReq struct {
+	Email string `json:"email"`
+}
+
+// handleSendCode issues an email verification code into Redis and asks
+// the mailer to deliver it. Stateless WRT the users table — the user
+// row gets created later by handleRegister once the code is checked.
+func (s *Server) handleSendCode(w http.ResponseWriter, r *http.Request) {
+	if s.verifier == nil || !s.verifier.Enabled() {
+		httpx.Error(w, http.StatusServiceUnavailable, "verifier_disabled", "email verification is not configured on this server")
+		return
+	}
+	var req sendCodeReq
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	if req.Email == "" {
+		httpx.Error(w, http.StatusBadRequest, "invalid_request", "email is required")
+		return
+	}
+	if err := s.verifier.Issue(r.Context(), req.Email); err != nil {
+		if errors.Is(err, ErrTooFrequent) {
+			httpx.Error(w, http.StatusTooManyRequests, "too_frequent", err.Error())
+			return
+		}
+		s.logger.WarnContext(r.Context(), "send-code failed", "err", err, "email", req.Email)
+		httpx.Error(w, http.StatusInternalServerError, "send_failed", "failed to send verification code")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"ok":             true,
+		"delivered":      s.verifier.MailerWorks(),
+		"ttl_seconds":    int(verifyCodeTTL.Seconds()),
+		"cooldown_seconds": int(verifyCooldownTTL.Seconds()),
+	})
+}
+
 type registerReq struct {
 	Email       string `json:"email,omitempty"`
 	Phone       string `json:"phone,omitempty"`
 	Password    string `json:"password"`
 	DisplayName string `json:"display_name,omitempty"`
+	Code        string `json:"code,omitempty"` // email verification code (required when verifier enabled)
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -186,6 +238,27 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if req.Password == "" {
 		httpx.Error(w, http.StatusBadRequest, "invalid_request", "password is required")
 		return
+	}
+	// When verifier is wired, registration MUST carry a valid code that
+	// matches the email. Phone-only signups are unaffected (no code path).
+	if s.verifier != nil && s.verifier.Enabled() && req.Email != "" {
+		if req.Code == "" {
+			httpx.Error(w, http.StatusBadRequest, "code_required", "email verification code is required")
+			return
+		}
+		if err := s.verifier.Check(r.Context(), req.Email, req.Code); err != nil {
+			if errors.Is(err, ErrCodeMissing) {
+				httpx.Error(w, http.StatusBadRequest, "code_expired", "verification code expired or not requested")
+				return
+			}
+			if errors.Is(err, ErrCodeMismatch) {
+				httpx.Error(w, http.StatusBadRequest, "code_mismatch", "verification code does not match")
+				return
+			}
+			s.logger.ErrorContext(r.Context(), "verify code error", "err", err)
+			httpx.Error(w, http.StatusInternalServerError, "verify_failed", "failed to verify code")
+			return
+		}
 	}
 	u, err := s.iam.Register(r.Context(), iam.RegisterRequest{
 		Email:       req.Email,

@@ -1,0 +1,64 @@
+# Production compose file. 不暴露内部端口 —— 公网流量走外层反向代理
+# (nginx / traefik / cloud LB)。
+#
+# 单二进制 llmhub-api + Next.js web + Next.js admin。
+# Postgres / Redis / NATS / Vault 全部使用外部已运维实例，
+# 由 1panel-network 网络互通。
+#
+# 启动：
+#   cp .env.example .env.prod && vi .env.prod
+#   docker compose --env-file .env.prod up -d
+
+name: llmhub-prod
+
+x-base: &base
+  restart: always
+  networks: [1panel-network]
+  logging:
+    driver: json-file
+    options: { max-size: '50m', max-file: '10' }
+
+services:
+  api:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-api:${IMAGE_TAG}
+    environment:
+      LLMHUB_ENV: production
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_REDIS_PASSWORD: ${LLMHUB_REDIS_PASSWORD:-}
+      LLMHUB_REDIS_DB: ${LLMHUB_REDIS_DB:-0}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_VAULT_ADDR: ${LLMHUB_VAULT_ADDR}
+      LLMHUB_VAULT_TOKEN: ${LLMHUB_VAULT_TOKEN}
+      LLMHUB_VAULT_MOUNT_PATH: ${LLMHUB_VAULT_MOUNT_PATH:-secret/pool}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT: ${LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT:-}
+      LLMHUB_ADMIN_BOOTSTRAP_PASSWORD: ${LLMHUB_ADMIN_BOOTSTRAP_PASSWORD:-}
+      LLMHUB_ADMIN_BOOTSTRAP_NAME: ${LLMHUB_ADMIN_BOOTSTRAP_NAME:-}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
+    expose: ['8080']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+
+  web:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-web:${IMAGE_TAG}
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
+    expose: ['3000']
+
+  admin:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-admin:${IMAGE_TAG}
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE}
+    expose: ['3001']
+
+networks:
+  1panel-network:
+    external: true

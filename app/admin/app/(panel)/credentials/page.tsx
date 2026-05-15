@@ -181,7 +181,7 @@ export default function CredentialsPage() {
                   <tr key={c.id}>
                     <td className="px-4 py-2.5">
                       <Link
-                        href={`/admin/credentials/${c.id}`}
+                        href={`/credentials/${c.id}`}
                         className="hover:underline"
                       >
                         🔑 {c.name}
@@ -202,7 +202,7 @@ export default function CredentialsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap">
                       <Link
-                        href={`/admin/credentials/${c.id}`}
+                        href={`/credentials/${c.id}`}
                         className="text-ink-800 hover:underline"
                       >
                         详情

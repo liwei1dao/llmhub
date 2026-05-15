@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/llmhub/llmhub/internal/platform/vault"
 	"github.com/llmhub/llmhub/internal/pool"
 	poolrepo "github.com/llmhub/llmhub/internal/pool/repo"
 	"github.com/llmhub/llmhub/pkg/httpx"
@@ -174,10 +175,19 @@ func (s *Server) createCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO(M-vault): write req.AuthPayload to vault, capture path + digest.
-	authRef := "devcred://pending"
+	// Encode the auth_payload into a `devjson://` ref understood by
+	// vault.DevInline; this is the local-dev path and round-trips back
+	// out at /sdk/credentials/issue time. Real HashiCorp Vault writes
+	// will replace this once vault.NewKV() lands.
+	authRef := "devjson://pending"
 	if len(req.AuthPayload) > 0 {
-		authRef = "devcred://" + req.ProductID + "/" + req.Name
+		enc, err := vault.EncodeDevJSON(req.AuthPayload)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, "invalid_request",
+				"auth_payload encoding failed: "+err.Error())
+			return
+		}
+		authRef = enc
 	}
 
 	bindings := make([]pool.CredentialBindingInput, 0, len(req.Bindings))
@@ -258,6 +268,57 @@ func (s *Server) getCredential(w http.ResponseWriter, r *http.Request) {
 		"credential": toCredentialView(c),
 		"bindings":   bvs,
 	})
+}
+
+// rotateAuthPayloadReq is the request body for re-writing an existing
+// credential's secret. We accept the same `auth_payload` map shape as
+// /credentials POST so the admin UI can reuse its form field-spec
+// rendering for both create + rotate flows.
+type rotateAuthPayloadReq struct {
+	AuthPayload map[string]string `json:"auth_payload"`
+}
+
+// rotateAuthPayload handles PATCH /api/admin/credentials/{id}/auth-payload.
+//
+// 用于两种场景：
+//   1. 周期性轮换上游 api_key（运营在火山控制台滚 key 之后 → 这里覆写）
+//   2. 修复 v0 的占位 ref ——「凭据创建时还没真正把 api_key 写进 vault」
+//      这条历史路径下 credential 行的 auth_payload_ref 是 devcred://...,
+//      永远 resolve 不出来；用此端点用 devjson:// 一次性补回。
+//
+// 仅替换 auth_payload_ref，不动 bindings / health / status。
+func (s *Server) rotateAuthPayload(w http.ResponseWriter, r *http.Request) {
+	if s.pool == nil {
+		httpx.Error(w, http.StatusNotImplemented, "internal_error", "pool service not wired")
+		return
+	}
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid_request", "id must be int")
+		return
+	}
+	var req rotateAuthPayloadReq
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	if len(req.AuthPayload) == 0 {
+		httpx.Error(w, http.StatusBadRequest, "invalid_request", "auth_payload is required")
+		return
+	}
+	ref, err := vault.EncodeDevJSON(req.AuthPayload)
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid_request", "auth_payload encoding failed: "+err.Error())
+		return
+	}
+	if err := s.pool.Repo().Credentials().UpdateAuthRef(r.Context(), id, ref); err != nil {
+		if errors.Is(err, poolrepo.ErrNotFound) {
+			httpx.Error(w, http.StatusNotFound, "not_found", "credential not found")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "internal_error", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // archiveCredential handles DELETE /api/admin/credentials/{id}.

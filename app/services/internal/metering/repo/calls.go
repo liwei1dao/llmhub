@@ -23,7 +23,7 @@ INSERT INTO metering.call_logs (
     id, ts, user_id, api_key_id, request_id,
     capability_id, model_id, provider_id, pool_account_id,
     status, error_code, duration_ms,
-    tokens_in, tokens_out, audio_seconds, characters,
+    tokens_in, tokens_out, audio_duration_seconds, characters,
     cost_retail_cents
 ) VALUES ($1, $2, $3, NULLIF($4, 0), $5,
           $6, $7, $8, $9,

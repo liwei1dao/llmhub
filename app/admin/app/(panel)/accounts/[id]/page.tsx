@@ -81,13 +81,28 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           </span>
         }
         actions={
-          <button
-            onClick={archive}
-            disabled={busy || account.status === 'archived'}
-            className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-40"
-          >
-            归档账号
-          </button>
+          <>
+            {vendor?.console_url ? (
+              <a
+                href={vendor.console_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-800 hover:bg-ink-50"
+                title={`打开 ${vendor.name} 官方控制台`}
+              >
+                <span>🔗</span>
+                <span>厂商官网</span>
+                <span className="text-[10px] text-ink-500">↗</span>
+              </a>
+            ) : null}
+            <button
+              onClick={archive}
+              disabled={busy || account.status === 'archived'}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+            >
+              归档账号
+            </button>
+          </>
         }
       />
 

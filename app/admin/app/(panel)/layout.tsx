@@ -11,6 +11,7 @@ const NAV: { group: string; items: { href: string; label: string }[] }[] = [
   {
     group: '资源',
     items: [
+      { href: '/services', label: '🧩 服务列表' },
       { href: '/accounts', label: '🪪 账号管理' },
       { href: '/credentials', label: '🔑 凭据管理' },
     ],

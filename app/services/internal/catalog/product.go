@@ -48,8 +48,10 @@ var Products = map[string]VendorProduct{
 		VendorID: "volc",
 		Name:     "方舟·大模型",
 		CredentialSchema: []FieldSpec{
-			{Key: "app_id", Label: "App ID", Required: true},
-			{Key: "app_token", Label: "App Token", Sensitive: true, Required: true},
+			// 方舟 OpenAI 兼容接口的鉴权：Authorization: Bearer <api_key>。
+			// 在火山控制台「方舟 → API Key 管理」里生成；老的 app_id/app_token
+			// (V2/STS) 不再推荐用，SDK 直连走 OpenAI 兼容协议。
+			{Key: "api_key", Label: "API Key", Sensitive: true, Required: true},
 		},
 		AllowedCapabilities: []string{"chat"},
 		ProtocolFamily:      "openai_compat",

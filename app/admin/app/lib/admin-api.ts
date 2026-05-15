@@ -240,6 +240,50 @@ export type CreateCredentialReq = {
   }[];
 };
 
+// ───────────────────────── 服务模块（代码层注册） ─────────────────────────
+
+// ServiceModule 是 code 端登记的「可上架的服务能力」—— 一个模块 =
+// 一个 (vendor_product, capability) 对。模块声明了开放的"参数空间"
+// （可用的模型版本 + 可用的上游节点），admin 在「服务列表」页只能
+// 在这个空间里挑选 → 落 SKU。
+export type ServiceModuleModel = {
+  id: string;
+  upstream_model: string;
+  display_name: string;
+  context_window?: number;
+  max_output_tokens?: number;
+  default_input_cents?: number;
+  default_output_cents?: number;
+  tags?: string[];
+};
+
+export type ServiceModuleRegion = {
+  id: string;
+  display_name: string;
+  endpoint: string;
+  default?: boolean;
+};
+
+export type ServiceModule = {
+  id: string; // "<vendor_product>.<capability>"
+  vendor_product_id: string;
+  vendor_product_name?: string;
+  vendor_id?: string;
+  vendor_name?: string;
+  capability: string;
+  capability_name?: string;
+  category_id?: string;
+  category_name?: string;
+  display_name: string;
+  description?: string;
+  default_billing_unit: string;
+  sort_order: number;
+  implemented: boolean;       // code 里有真适配器在 init() 注册过
+  listed_skus: number;        // 已在 platform_services 上架的 SKU 数
+  available_models?: ServiceModuleModel[];
+  available_regions?: ServiceModuleRegion[];
+};
+
 // catalog.platform_services + 内联当前 retail 价
 export type PlatformService = {
   id: string;
@@ -430,4 +474,67 @@ export type AdminRecharge = {
   paid_at: string | null;
   created_at: string;
   channel_order_id: string | null;
+};
+
+// ─────────────────────────── 用户用量（admin） ───────────────────────────
+// 一次性把 admin 用户详情"使用统计" tab 要展示的 4 块数据装进同一个
+// 响应，前端不用再串四五个请求。窗口由 ?days=30 控制（1..90）。
+export type AdminUserUsage = {
+  range_days: number;
+  from: string; // YYYY-MM-DD
+  to: string;
+  totals: {
+    calls: number;
+    success_calls: number;
+    tokens_in: number;
+    tokens_out: number;
+    cost_retail_cents: number;
+    unique_skus: number;
+    avg_latency_ms: number;
+    avg_ttfb_ms: number;
+  };
+  by_sku: AdminUsageBySKU[];
+  by_status: AdminUsageStatusBucket[];
+  daily: AdminUsageDailyBucket[];
+  recent: AdminUsageRecentCall[];
+};
+
+export type AdminUsageBySKU = {
+  sku_id: string;
+  vendor_id: string;
+  product_id: string;
+  calls: number;
+  success_calls: number;
+  tokens_in: number;
+  tokens_out: number;
+  cost_retail_cents: number;
+  last_used_at: string;
+};
+
+export type AdminUsageStatusBucket = {
+  status: string;
+  count: number;
+};
+
+export type AdminUsageDailyBucket = {
+  day: string;
+  calls: number;
+  success_calls: number;
+  tokens_in: number;
+  tokens_out: number;
+  cost_retail_cents: number;
+};
+
+export type AdminUsageRecentCall = {
+  ts: string;
+  request_id: string;
+  sku_id: string;
+  vendor_id: string;
+  product_id: string;
+  status: string;
+  error_code: string;
+  duration_ms: number;
+  ttfb_ms: number;
+  tokens_in: number;
+  tokens_out: number;
 };

@@ -11,7 +11,7 @@ RUN pnpm install --no-frozen-lockfile
 
 FROM node:${NODE_VERSION}-alpine AS build
 ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ARG NEXT_PUBLIC_API_BASE=http://localhost:8080
+ARG NEXT_PUBLIC_API_BASE=http://localhost:18080
 ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9 --activate

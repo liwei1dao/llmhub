@@ -9,6 +9,8 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -42,11 +44,30 @@ func (Stub) Resolve(_ context.Context, _ string) (map[string]string, error) {
 // directly into the pool.api_keys.vault_ref column for local testing.
 // Supported forms:
 //
-//	"devkey://<bearer>"     → returns {"api_key": "<bearer>"}
-//	"devaksk://<ak>:<sk>"   → returns {"access_key": "<ak>", "secret_key": "<sk>"}
+//	"devkey://<bearer>"      → returns {"api_key": "<bearer>"}
+//	"devaksk://<ak>:<sk>"    → returns {"access_key": "<ak>", "secret_key": "<sk>"}
+//	"devjson://<b64-json>"   → base64url(json map) → returned verbatim;
+//	                            use this when the upstream needs an
+//	                            arbitrary auth_payload shape (region /
+//	                            app_id / multi-token, etc.)
 //
 // Never enable this resolver in production.
 type DevInline struct{}
+
+// EncodeDevJSON renders an auth_payload map into the `devjson://...`
+// ref string that DevInline.Resolve understands. Admin's credential
+// create handler uses this so the real upstream secret is round-tripable
+// without a real Vault.
+func EncodeDevJSON(payload map[string]string) (string, error) {
+	if len(payload) == 0 {
+		return "", errors.New("vault: empty auth payload")
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return "devjson://" + base64.RawURLEncoding.EncodeToString(raw), nil
+}
 
 // Resolve parses dev:// URLs into credential maps.
 func (DevInline) Resolve(_ context.Context, ref string) (map[string]string, error) {
@@ -64,6 +85,16 @@ func (DevInline) Resolve(_ context.Context, ref string) (map[string]string, erro
 			return nil, ErrNotFound
 		}
 		return map[string]string{"access_key": parts[0], "secret_key": parts[1]}, nil
+	case strings.HasPrefix(ref, "devjson://"):
+		raw, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(ref, "devjson://"))
+		if err != nil {
+			return nil, ErrNotFound
+		}
+		var m map[string]string
+		if err := json.Unmarshal(raw, &m); err != nil || len(m) == 0 {
+			return nil, ErrNotFound
+		}
+		return m, nil
 	}
 	return nil, ErrNotFound
 }

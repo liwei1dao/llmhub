@@ -93,6 +93,10 @@ func (s *Server) Mount(r chi.Router) {
 				r.Get("/capabilities", s.listCapabilities)
 			})
 
+			// 服务模块（代码侧注册）— admin「服务列表」页用，
+			// 列出可被上架的服务模块 + 各自开放的模型 / 节点参数空间。
+			r.Get("/service-modules", s.listServiceModules)
+
 			// 上游账号池（账户级别）
 			r.Route("/vendor-accounts", func(r chi.Router) {
 				r.Get("/", s.listVendorAccounts)
@@ -108,6 +112,7 @@ func (s *Server) Mount(r chi.Router) {
 				r.Post("/", s.createCredential)
 				r.Get("/{id}", s.getCredential)
 				r.Delete("/{id}", s.archiveCredential)
+				r.Patch("/{id}/auth-payload", s.rotateAuthPayload)
 				r.Post("/{id}/bindings", s.addBinding)
 				r.Get("/{id}/events", s.listCredentialEvents)
 			})
@@ -146,6 +151,7 @@ func (s *Server) Mount(r chi.Router) {
 			r.Get("/users", s.listUsers)
 			r.Get("/users/{id}", s.getUser)
 			r.Get("/users/{id}/wallet", s.getUserWallet)
+			r.Get("/users/{id}/usage", s.getUserUsage)
 			r.Get("/reconciliation", s.listRecon)
 			r.Post("/recharges/{order_no}/confirm", s.handleConfirmRecharge)
 		})

@@ -10,6 +10,26 @@ export default function APIKeysPage() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<CreatedAPIKey | null>(null);
+  const [revoking, setRevoking] = useState<number | null>(null);
+
+  // Revoking is irreversible — confirm with the user, then DELETE.
+  // The list still shows the row (status='revoked') so the user has an
+  // audit trail; old SDK installs holding this key get 401 immediately
+  // on their next /sdk/credentials/issue call.
+  async function onRevoke(k: APIKey) {
+    if (k.status !== 'active') return;
+    if (!confirm(`撤销 ${k.name ?? k.prefix}? 该 key 立即失效，无法恢复。`)) return;
+    setRevoking(k.id);
+    setError(null);
+    try {
+      await api.delete(`/api/user/api-keys/${k.id}`);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRevoking(null);
+    }
+  }
 
   async function load() {
     try {
@@ -99,18 +119,19 @@ export default function APIKeysPage() {
               <th className="px-5 py-2.5 text-left">权限</th>
               <th className="px-5 py-2.5 text-left">状态</th>
               <th className="px-5 py-2.5 text-left">创建时间</th>
+              <th className="px-5 py-2.5 text-right">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-200">
             {keys === null ? (
               <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-ink-500">
+                <td colSpan={6} className="px-5 py-6 text-center text-ink-500">
                   加载中…
                 </td>
               </tr>
             ) : keys.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-ink-500">
+                <td colSpan={6} className="px-5 py-12 text-center text-ink-500">
                   还没有 Key —— 用上方表单创建一个。
                 </td>
               </tr>
@@ -124,6 +145,19 @@ export default function APIKeysPage() {
                     <StatusPill status={k.status} />
                   </td>
                   <td className="px-5 py-2.5 text-ink-500">{fmtDateTime(k.created)}</td>
+                  <td className="px-5 py-2.5 text-right">
+                    {k.status === 'active' ? (
+                      <button
+                        onClick={() => onRevoke(k)}
+                        disabled={revoking === k.id}
+                        className="rounded-lg border border-rose-300 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                      >
+                        {revoking === k.id ? '撤销中…' : '撤销'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-ink-400">—</span>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

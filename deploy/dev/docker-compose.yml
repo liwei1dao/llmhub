@@ -1,0 +1,77 @@
+# Dev (开发/测试) environment compose file.
+#
+# 单二进制 llmhub-api + Next.js web + Next.js admin。
+# Postgres / Redis / NATS / Vault 全部使用外部已运维的实例，
+# 由 1panel-network 网络互通。
+#
+# 启动：
+#   cp .env.example .env.dev && vi .env.dev
+#   docker compose --env-file .env.dev up -d
+
+name: llmhub-dev
+
+x-base: &base
+  restart: unless-stopped
+  networks: [1panel-network]
+  logging:
+    driver: json-file
+    options: { max-size: '20m', max-file: '5' }
+
+services:
+  migrate:
+    image: gomicro/goose:3.26.0
+    platform: linux/amd64
+    networks: [1panel-network]
+    volumes:
+      - ../../app/services/migrations:/migrations:ro
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: ${LLMHUB_DB_DSN}
+    entrypoint: ['/bin/goose']
+    command: ['-dir', '/migrations', 'up']
+    restart: 'no'
+
+  api:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-api:${IMAGE_TAG:-dev-latest}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment:
+      LLMHUB_ENV: dev
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_REDIS_PASSWORD: ${LLMHUB_REDIS_PASSWORD:-}
+      LLMHUB_REDIS_DB: ${LLMHUB_REDIS_DB:-0}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_VAULT_ADDR: ${LLMHUB_VAULT_ADDR}
+      LLMHUB_VAULT_TOKEN: ${LLMHUB_VAULT_TOKEN}
+      LLMHUB_VAULT_MOUNT_PATH: ${LLMHUB_VAULT_MOUNT_PATH:-secret/pool}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT: ${LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT:-}
+      LLMHUB_ADMIN_BOOTSTRAP_PASSWORD: ${LLMHUB_ADMIN_BOOTSTRAP_PASSWORD:-}
+      LLMHUB_ADMIN_BOOTSTRAP_NAME: ${LLMHUB_ADMIN_BOOTSTRAP_NAME:-}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-}
+    ports: ['8080:8080']
+
+  web:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-web:${IMAGE_TAG:-dev-latest}
+    depends_on:
+      api: { condition: service_started }
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8080}
+    ports: ['3000:3000']
+
+  admin:
+    <<: *base
+    image: ${REGISTRY_URL}/llmhub-admin:${IMAGE_TAG:-dev-latest}
+    depends_on:
+      api: { condition: service_started }
+    environment:
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_BASE:-http://localhost:8080}
+    ports: ['3001:3001']
+
+networks:
+  1panel-network:
+    external: true

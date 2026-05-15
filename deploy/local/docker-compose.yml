@@ -1,0 +1,101 @@
+# Local compose: only llmhub api + web + admin + one-shot migrate.
+#
+# 外部依赖（postgres / redis / nats / vault）已在宿主机上运行，
+# 通过 1panel-network 网络直连，连接信息全部走环境变量。
+#
+# 构建镜像（仓库根目录执行）：
+#   docker build -t llmhub-api:local   -f app/services/deploy/Dockerfile app/services
+#   docker build -t llmhub-web:local   -f app/web/Dockerfile             app/web
+#   docker build -t llmhub-admin:local -f app/admin/Dockerfile           app/admin
+#
+# 启动：
+#   cp .env.example .env.local && vi .env.local
+#   docker compose --env-file .env.local up -d
+#
+# 端点：
+#   web   → http://localhost:13000
+#   admin → http://localhost:13001
+#   api   → http://localhost:18080
+
+name: llmhub-local
+
+x-base: &base
+  restart: unless-stopped
+  networks: [1panel-network]
+  logging:
+    driver: json-file
+    options: { max-size: '20m', max-file: '5' }
+
+services:
+  migrate:
+    image: gomicro/goose:3.26.0
+    platform: linux/amd64
+    networks: [1panel-network]
+    volumes:
+      - ../../app/services/migrations:/migrations:ro
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: ${LLMHUB_DB_DSN}
+    entrypoint: ['/bin/goose']
+    command: ['-dir', '/migrations', 'up']
+    restart: 'no'
+
+  api:
+    <<: *base
+    image: llmhub-api:local
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment:
+      LLMHUB_ENV: ${LLMHUB_ENV:-local}
+      LLMHUB_DB_DSN: ${LLMHUB_DB_DSN}
+      LLMHUB_REDIS_ADDR: ${LLMHUB_REDIS_ADDR}
+      LLMHUB_REDIS_PASSWORD: ${LLMHUB_REDIS_PASSWORD:-}
+      LLMHUB_REDIS_DB: ${LLMHUB_REDIS_DB:-0}
+      LLMHUB_NATS_URL: ${LLMHUB_NATS_URL}
+      LLMHUB_VAULT_ADDR: ${LLMHUB_VAULT_ADDR}
+      LLMHUB_VAULT_TOKEN: ${LLMHUB_VAULT_TOKEN}
+      LLMHUB_VAULT_MOUNT_PATH: ${LLMHUB_VAULT_MOUNT_PATH:-secret/pool}
+      LLMHUB_ADMIN_TOKEN: ${LLMHUB_ADMIN_TOKEN}
+      LLMHUB_INTERNAL_TOKEN: ${LLMHUB_INTERNAL_TOKEN}
+      LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT: ${LLMHUB_ADMIN_BOOTSTRAP_ACCOUNT:-}
+      LLMHUB_ADMIN_BOOTSTRAP_PASSWORD: ${LLMHUB_ADMIN_BOOTSTRAP_PASSWORD:-}
+      LLMHUB_ADMIN_BOOTSTRAP_NAME: ${LLMHUB_ADMIN_BOOTSTRAP_NAME:-}
+      LLMHUB_WEB_ORIGINS: ${LLMHUB_WEB_ORIGINS:-http://localhost:13000,http://localhost:13001}
+      LLMHUB_SMTP_HOST: ${LLMHUB_SMTP_HOST:-}
+      LLMHUB_SMTP_PORT: ${LLMHUB_SMTP_PORT:-587}
+      LLMHUB_SMTP_USERNAME: ${LLMHUB_SMTP_USERNAME:-}
+      LLMHUB_SMTP_PASSWORD: ${LLMHUB_SMTP_PASSWORD:-}
+      LLMHUB_SMTP_FROM: ${LLMHUB_SMTP_FROM:-}
+      LLMHUB_SMTP_FROM_NAME: ${LLMHUB_SMTP_FROM_NAME:-LLMHub}
+    ports: ['18080:8080']
+
+  # 注意：NEXT_PUBLIC_* 是 build 时烧进 Next.js bundle 的，runtime 改
+  # 不动；如果想换 API base，必须重 build 镜像并传 --build-arg
+  # NEXT_PUBLIC_API_BASE=...。这里的 environment 仅作为运行容器内
+  # process.env 的备份，便于 SSR 端读取。
+  #
+  # LLMHUB_API_BASE 是给 Next.js 服务端路由（/api/sdk-test/*）用的 ——
+  # 浏览器走 NEXT_PUBLIC_API_BASE=http://localhost:18080，但容器内 SSR
+  # 走 compose 服务名 http://api:8080。
+  web:
+    <<: *base
+    image: llmhub-web:local
+    depends_on:
+      api: { condition: service_started }
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:18080}
+      LLMHUB_API_BASE: ${LLMHUB_API_BASE:-http://api:8080}
+    ports: ['13000:3000']
+
+  admin:
+    <<: *base
+    image: llmhub-admin:local
+    depends_on:
+      api: { condition: service_started }
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:18080}
+    ports: ['13001:3001']
+
+networks:
+  1panel-network:
+    external: true

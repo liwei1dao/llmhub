@@ -41,14 +41,18 @@ import (
 	"github.com/llmhub/llmhub/internal/iam"
 	iamrepo "github.com/llmhub/llmhub/internal/iam/repo"
 	meteringrepo "github.com/llmhub/llmhub/internal/metering/repo"
+	"github.com/llmhub/llmhub/internal/platform/cache"
 	"github.com/llmhub/llmhub/internal/platform/config"
 	"github.com/llmhub/llmhub/internal/platform/db"
 	"github.com/llmhub/llmhub/internal/platform/log"
+	"github.com/llmhub/llmhub/internal/platform/mail"
 	"github.com/llmhub/llmhub/internal/platform/mq"
 	"github.com/llmhub/llmhub/internal/platform/vault"
 	"github.com/llmhub/llmhub/internal/pool"
 	poolrepo "github.com/llmhub/llmhub/internal/pool/repo"
 	"github.com/llmhub/llmhub/internal/sdkapi"
+	_ "github.com/llmhub/llmhub/internal/vendors" // 触发所有 vendor 适配器 init()，
+	// 把自己登记到 catalog.adapterRegistry（admin「服务列表」的"代码已实现"靠这条链路）
 	"github.com/llmhub/llmhub/internal/wallet"
 	walletrepo "github.com/llmhub/llmhub/internal/wallet/repo"
 	"github.com/llmhub/llmhub/internal/worker"
@@ -144,6 +148,25 @@ func main() {
 		return p.EndpointTemplate, p.ProtocolFamily, true
 	})
 
+	// ---- redis + mailer (for email verification on user signup) ----
+	// Both are optional in dev: when Redis isn't configured we skip the
+	// verifier entirely and registration falls back to legacy mode (no
+	// email verification). When SMTP isn't configured but Redis is, the
+	// mailer downgrades to a dev mailer that logs codes to stdout.
+	var verifier *account.Verifier
+	if cfg.Redis.Addr != "" {
+		rds, err := cache.Open(ctx, cfg.Redis)
+		if err != nil {
+			logger.Warn("redis unavailable; email verification disabled", "err", err)
+		} else {
+			mailer := mail.New(cfg.SMTP, logger)
+			verifier = account.NewVerifier(rds, mailer)
+			logger.Info("email verifier ready", "smtp_enabled", mailer.Enabled())
+		}
+	} else {
+		logger.Warn("LLMHUB_REDIS_ADDR not set; email verification disabled")
+	}
+
 	// ---- compose: account-server hosts /api/user/*, /api/admin/*, /sdk/* ----
 	accountSrv := account.New(logger, iamSvc, walletSvc, adminSrv).
 		WithMetering(meterRepo).
@@ -151,6 +174,9 @@ func main() {
 		WithSubscriptions(iamrepo.New(dbpool).Subscriptions()).
 		WithCatalog(catalogSvc).
 		WithPinger(dbpool)
+	if verifier != nil {
+		accountSrv = accountSrv.WithVerifier(verifier)
+	}
 
 	addr := cfg.HTTP.Addr
 	if addr == "" {

@@ -4,6 +4,8 @@ import LogoutButton from './_components/logout-button';
 
 const NAV = [
   { href: '/dashboard', label: '总览' },
+  { href: '/services', label: '服务列表' },
+  { href: '/subscriptions', label: '服务订阅' },
   { href: '/api-keys', label: 'API Key' },
   { href: '/wallet', label: '钱包' },
   { href: '/usage', label: '用量' },

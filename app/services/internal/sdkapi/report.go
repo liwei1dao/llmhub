@@ -1,6 +1,7 @@
 package sdkapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -70,63 +71,61 @@ func (s *Server) handleUsageReport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_request", "invalid json body")
 		return
 	}
-	if req.LeaseID == "" {
-		writeError(w, http.StatusBadRequest, "invalid_request", "lease_id is required")
+	if status, code, msg, ok := s.IngestUsage(r.Context(), auth.UserID, &req); !ok {
+		writeError(w, status, code, msg)
 		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// IngestUsage is the core of the SDK's POST /sdk/usage/report — it
+// looks up the lease, verifies ownership, and writes the metering /
+// quota / health-score side-effects. Exported so the user-console test
+// path (cookie-auth) can record its own usage without rewriting the
+// pipeline. Returns (status, errCode, message, ok); ok=true means
+// nothing went wrong and the caller can 204 / continue.
+func (s *Server) IngestUsage(ctx context.Context, ownerUserID int64, req *UsageReportRequest) (int, string, string, bool) {
+	if req.LeaseID == "" {
+		return http.StatusBadRequest, "invalid_request", "lease_id is required", false
 	}
 	if req.Status == "" {
 		req.Status = "success"
 	}
 
-	// Step 2 + 3: load the lease and cross-check ownership.
-	lease, err := s.d.Pool.Repo().Leases().GetActive(r.Context(), req.LeaseID)
+	lease, err := s.d.Pool.Repo().Leases().GetActive(ctx, req.LeaseID)
 	if err != nil {
 		if errors.Is(err, poolrepo.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "lease_not_found",
-				"lease is unknown, expired, or revoked")
-			return
+			return http.StatusNotFound, "lease_not_found", "lease is unknown, expired, or revoked", false
 		}
-		s.d.Logger.ErrorContext(r.Context(), "report: lease lookup", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal_error", "lease lookup failed")
-		return
+		s.d.Logger.ErrorContext(ctx, "report: lease lookup", "err", err)
+		return http.StatusInternalServerError, "internal_error", "lease lookup failed", false
 	}
-	if lease.UserID != auth.UserID {
-		writeError(w, http.StatusForbidden, "lease_owner_mismatch",
-			"lease is owned by a different user")
-		return
+	if lease.UserID != ownerUserID {
+		return http.StatusForbidden, "lease_owner_mismatch", "lease is owned by a different user", false
 	}
 
-	// Step 4: append metering.call_logs (best-effort).
-	s.appendCallLog(r, &req, lease)
+	s.appendCallLogCtx(ctx, req, lease)
 
-	// Step 5: bump lease counters.
-	if err := s.d.Pool.Repo().Leases().AddUsage(r.Context(), req.LeaseID, req.InputUnits, req.OutputUnits); err != nil {
-		s.d.Logger.WarnContext(r.Context(), "report: lease usage update", "err", err)
+	if err := s.d.Pool.Repo().Leases().AddUsage(ctx, req.LeaseID, req.InputUnits, req.OutputUnits); err != nil {
+		s.d.Logger.WarnContext(ctx, "report: lease usage update", "err", err)
 	}
 
-	// Step 6: decrement subscription quota. Total units = input+output.
-	// For usage-report ergonomics, we count whichever side the SKU bills
-	// on; for llm SKUs both sides count.
 	total := req.InputUnits + req.OutputUnits
 	if total > 0 {
-		if _, _, err := s.d.Subs.AddUsage(r.Context(), lease.UserID, lease.SKUID, total); err != nil {
+		if _, _, err := s.d.Subs.AddUsage(ctx, lease.UserID, lease.SKUID, total); err != nil {
 			if !errors.Is(err, iamrepo.ErrNotFound) {
-				s.d.Logger.WarnContext(r.Context(), "report: quota decrement", "err", err)
+				s.d.Logger.WarnContext(ctx, "report: quota decrement", "err", err)
 			}
 		}
 	}
 
-	// Step 7: health-score feedback. Only failures move the needle; on
-	// success the binding's score slowly recovers via successful reports
-	// (caps at 100 in the SQL).
 	outcome := mapReportOutcome(req.Status)
 	if delta := deltaForOutcome(outcome); delta != 0 {
-		if _, err := s.d.Pool.Repo().Bindings().AdjustHealth(r.Context(), lease.BindingID, delta, req.ErrorCode); err != nil {
-			s.d.Logger.WarnContext(r.Context(), "report: binding health", "err", err)
+		if _, err := s.d.Pool.Repo().Bindings().AdjustHealth(ctx, lease.BindingID, delta, req.ErrorCode); err != nil {
+			s.d.Logger.WarnContext(ctx, "report: binding health", "err", err)
 		}
 	}
-
-	w.WriteHeader(http.StatusNoContent)
+	return 0, "", "", true
 }
 
 // mapReportOutcome normalises an SDK-reported status string. Unknown /
@@ -164,23 +163,19 @@ func deltaForOutcome(o reportOutcome) int {
 	return 0
 }
 
-// appendCallLog writes a metering row from the report. Best-effort —
+// appendCallLogCtx writes a metering row from the report. Best-effort —
 // usage reports are a soft signal, so we log failures and swallow them.
 //
 // vendor_id / product_id come from the upstream binding context that
 // the lease was originally minted under. Admin reports join back to
 // pool.credentials when they need the full vendor lineage.
-func (s *Server) appendCallLog(r *http.Request, req *UsageReportRequest, lease *poolrepo.Lease) {
+func (s *Server) appendCallLogCtx(ctx context.Context, req *UsageReportRequest, lease *poolrepo.Lease) {
 	if s.d.Metering == nil {
 		return
 	}
-	// Resolve vendor_id + product_id from the SKU. The SKU is cached in
-	// catalog.Service so this is essentially free.
 	var vendorID, productID string
-	if sku, err := s.d.Catalog.LookupSKU(r.Context(), lease.SKUID); err == nil && sku != nil {
+	if sku, err := s.d.Catalog.LookupSKU(ctx, lease.SKUID); err == nil && sku != nil {
 		productID = sku.VendorProductID
-		// vendor_id is the prefix of "<vendor>.<product>" — keeps SDK API
-		// from having to import the static catalog Products map.
 		if idx := strings.IndexByte(productID, '.'); idx > 0 {
 			vendorID = productID[:idx]
 		}
@@ -203,7 +198,7 @@ func (s *Server) appendCallLog(r *http.Request, req *UsageReportRequest, lease *
 		DurationMs:   req.LatencyMs,
 		TTFBMs:       req.TTFBMs,
 	}
-	if err := s.d.Metering.InsertCallLogV2(r.Context(), row); err != nil {
-		s.d.Logger.WarnContext(r.Context(), "report: metering append", "err", err)
+	if err := s.d.Metering.InsertCallLogV2(ctx, row); err != nil {
+		s.d.Logger.WarnContext(ctx, "report: metering append", "err", err)
 	}
 }

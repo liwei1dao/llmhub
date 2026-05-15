@@ -90,6 +90,62 @@ func Validate() error {
 			seen[capID] = struct{}{}
 		}
 	}
+	// ── service modules ───────────────────────────────────────
+	for k, m := range Modules {
+		if k != m.ID {
+			return fmt.Errorf("module map key %q != ID %q", k, m.ID)
+		}
+		// ID 必须 = "<vendor_product>.<capability>"，否则反推 (product,
+		// capability) 就要查表，违背 ID 命名约定的初衷。
+		want := m.VendorProductID + "." + m.Capability
+		if m.ID != want {
+			return fmt.Errorf("module %q ID must equal %q", m.ID, want)
+		}
+		if _, ok := Products[m.VendorProductID]; !ok {
+			return fmt.Errorf("module %q references unknown product %q", m.ID, m.VendorProductID)
+		}
+		if _, ok := Capabilities[m.Capability]; !ok {
+			return fmt.Errorf("module %q references unknown capability %q", m.ID, m.Capability)
+		}
+		if !ProductAllowsCapability(m.VendorProductID, m.Capability) {
+			return fmt.Errorf("module %q: capability %q not allowed by product %q",
+				m.ID, m.Capability, m.VendorProductID)
+		}
+		// 模块的 DefaultBillingUnit 必须和 Capability.BillingUnit 对齐，
+		// 否则 admin 创建的 SKU 计费单位会和能力声明冲突。
+		if cap, ok := Capabilities[m.Capability]; ok && m.DefaultBillingUnit != cap.BillingUnit {
+			return fmt.Errorf("module %q DefaultBillingUnit %q != capability %q's %q",
+				m.ID, m.DefaultBillingUnit, m.Capability, cap.BillingUnit)
+		}
+		// 模型 ID 在同一模块内必须唯一。
+		seenModels := make(map[string]struct{}, len(m.AvailableModels))
+		for _, mo := range m.AvailableModels {
+			if mo.ID == "" || mo.UpstreamModel == "" || mo.DisplayName == "" {
+				return fmt.Errorf("module %q has model with empty id / upstream / display_name", m.ID)
+			}
+			if _, dup := seenModels[mo.ID]; dup {
+				return fmt.Errorf("module %q lists model %q twice", m.ID, mo.ID)
+			}
+			seenModels[mo.ID] = struct{}{}
+		}
+		seenRegions := make(map[string]struct{}, len(m.AvailableRegions))
+		defaultCount := 0
+		for _, ro := range m.AvailableRegions {
+			if ro.ID == "" || ro.Endpoint == "" {
+				return fmt.Errorf("module %q has region with empty id / endpoint", m.ID)
+			}
+			if _, dup := seenRegions[ro.ID]; dup {
+				return fmt.Errorf("module %q lists region %q twice", m.ID, ro.ID)
+			}
+			seenRegions[ro.ID] = struct{}{}
+			if ro.Default {
+				defaultCount++
+			}
+		}
+		if defaultCount > 1 {
+			return fmt.Errorf("module %q has more than one default region", m.ID)
+		}
+	}
 	return nil
 }
 

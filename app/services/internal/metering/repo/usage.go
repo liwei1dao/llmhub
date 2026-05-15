@@ -29,7 +29,7 @@ SELECT date_trunc('day', ts) AS day,
        COUNT(*) FILTER (WHERE status = 'success') AS success_calls,
        COALESCE(SUM(tokens_in), 0)         AS tokens_in,
        COALESCE(SUM(tokens_out), 0)        AS tokens_out,
-       COALESCE(SUM(audio_seconds), 0)     AS audio_seconds,
+       COALESCE(SUM(audio_duration_seconds), 0) AS audio_seconds,
        COALESCE(SUM(characters), 0)        AS characters,
        COALESCE(SUM(cost_retail_cents), 0) AS cost_retail_cents
 FROM metering.call_logs

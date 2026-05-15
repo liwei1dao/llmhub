@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, type Vendor, type VendorAccount } from '@/lib/admin-api';
 import { fmtCents, fmtDateTime } from '@/lib/format';
@@ -10,6 +10,7 @@ import CreateMasterForm from './_create-form';
 // 主账号管理：v0.2 的 pool.vendor_accounts 表。
 // 主账号承担余额查询/对账，不调业务 API（业务凭据见 /admin/credentials）。
 export default function AccountsPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<VendorAccount[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [filter, setFilter] = useState({ vendor: '', status: '', q: '' });
@@ -145,12 +146,12 @@ export default function AccountsPage() {
               </tr>
             ) : (
               rows.map((a) => (
-                <tr key={a.id} className="hover:bg-ink-50">
-                  <td className="px-4 py-2.5">
-                    <Link href={`/accounts/${a.id}`} className="text-ink-800 hover:text-brand-600">
-                      🪪 {a.name}
-                    </Link>
-                  </td>
+                <tr
+                  key={a.id}
+                  onClick={() => router.push(`/accounts/${a.id}`)}
+                  className="cursor-pointer hover:bg-ink-50"
+                >
+                  <td className="px-4 py-2.5 text-ink-800">🪪 {a.name}</td>
                   <td className="px-4 py-2.5 text-xs text-ink-500">{a.vendor_id}</td>
                   <td className="px-4 py-2.5 mono text-xs text-ink-500">acct_{a.id}</td>
                   <td className="px-4 py-2.5 text-xs">{a.entity ?? '—'}</td>
@@ -165,7 +166,10 @@ export default function AccountsPage() {
                   <td className="px-4 py-2.5 text-xs text-ink-500">{fmtDateTime(a.created_at)}</td>
                   <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap">
                     <button
-                      onClick={() => archive(a.id, a.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        archive(a.id, a.name);
+                      }}
                       className="text-rose-700 hover:underline"
                     >
                       归档

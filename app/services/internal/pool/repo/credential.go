@@ -166,6 +166,22 @@ func (cr *CredentialRepo) UpdateStatus(ctx context.Context, id int64, status str
 	return nil
 }
 
+// UpdateAuthRef rotates the credential's auth_payload_ref in place. Used
+// when an operator needs to refresh the underlying secret (key rotation,
+// or repairing a row that was created before the platform persisted real
+// auth payloads). Does NOT touch bindings / health.
+func (cr *CredentialRepo) UpdateAuthRef(ctx context.Context, id int64, ref string) error {
+	const q = `UPDATE pool.credentials SET auth_payload_ref=$1, updated_at=NOW() WHERE id=$2`
+	tag, err := cr.r.pool.Exec(ctx, q, ref, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // AdjustHealth nudges the credential's health score, clamped to [0,100].
 // On failure (delta < 0) bumps consecutive_failures and last_error_at.
 // Returns the new score.

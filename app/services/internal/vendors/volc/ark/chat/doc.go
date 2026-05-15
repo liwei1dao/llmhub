@@ -1,17 +1,24 @@
-// Package chat is the placeholder package for the volc/ark chat
-// capability adapter.
+// Package chat 是火山引擎 · 方舟 · 文本对话能力的服务端适配器。
 //
-// 当前阶段 LLMHub 是「聚合 SDK」平台：SDK 拿短期 lease 直连火山方舟，平台不在
-// 调用路径上。所以这里没有 adapter 代码 —— 真正的火山方舟调用在 SDK 端发生。
+// LLMHub 是「聚合 SDK」平台：SDK 拿短期 lease 直连火山方舟，平台不在
+// 调用路径上。所以这个包不写"调上游 API"的代码 —— 那一段在
+// sdk/go/transport_openai_compat.go。
 //
-// 这个空目录的存在是为了：
-//   1. 在仓库里把"火山引擎 → 方舟板块 → 大模型(chat)"这条 vendor 三层结构留出来
-//   2. 等到要做的事变成需要平台代理时（例如内置 mock / 故障注入 / 巡检请求 /
-//      auth_validator），代码自然落到这里，而不是和别家厂商混在一个总 adapter
-//      文件里
+// 这个包真正承担的职责：
 //
-// 入口 metadata 在 internal/catalog/{vendor,product,capability}.go 维护：
-//   - Vendor    "volc"     (火山引擎)
-//   - Product   "volc.ark" (方舟·大模型)
-//   - Capability "chat"    (对话, 计费单位 1k_tokens)
+//  1. init() 时调 catalog.RegisterAdapter("volc.ark.chat")，向平台
+//     声明"代码侧已实现这个服务模块" —— admin「服务列表」据此把
+//     Implemented 标记翻成 true，"添加服务"按钮才会解锁。
+//
+//  2. ValidateAuthPayload 在 admin 录入凭据 / SDK 颁发 lease 之前
+//     做一次本地形态校验：保证 api_key 字段存在且非空。这层校验是
+//     防御性的 —— catalog.Products["volc.ark"].CredentialSchema 已经
+//     声明了 api_key 是 required，但 schema 检查依赖 admin 表单层；
+//     在适配器里再校一次能挡住"程序直接绕过表单写库"的情形。
+//
+// 入口 metadata 在 internal/catalog/{vendor,product,capability,module}.go：
+//   - Vendor      "volc"          (火山引擎)
+//   - Product     "volc.ark"      (方舟·大模型)
+//   - Capability  "chat"          (对话, 计费单位 1k_tokens)
+//   - Module      "volc.ark.chat" (火山方舟·文本大模型) — 由本包注册
 package chat

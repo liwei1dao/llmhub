@@ -67,6 +67,13 @@ func (s *Service) ProvidersForModel(ctx context.Context, modelID string) ([]repo
 	return s.repo.ListProvidersForModel(ctx, modelID)
 }
 
+// ListPublicSKUs proxies to the repo. No caching — this is called by
+// the marketplace page, not the hot path, and the underlying query is
+// already <1 ms even at hundreds of SKUs.
+func (s *Service) ListPublicSKUs(ctx context.Context) ([]repo.SKU, error) {
+	return s.repo.ListPublicSKUs(ctx)
+}
+
 // Pricing returns the effective pricing for a (model, provider, capability, kind) tuple.
 func (s *Service) Pricing(ctx context.Context, modelID, providerID, capabilityID, kind string) (*repo.Pricing, error) {
 	k := pricingKey{model: modelID, provider: providerID, capability: capabilityID, kind: kind}

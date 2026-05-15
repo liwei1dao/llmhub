@@ -29,6 +29,19 @@ type Config struct {
 	Vault   VaultConfig   `mapstructure:"vault"`
 	Tracing TracingConfig `mapstructure:"tracing"`
 	Log     LogConfig     `mapstructure:"log"`
+	SMTP    SMTPConfig    `mapstructure:"smtp"`
+}
+
+// SMTPConfig — 出站邮件 (邮箱验证码)。
+// Host/Port/Username/Password/From 全部为空时，账号服务自动降级到 dev
+// mailer：验证码只写日志，不发邮件，方便本地无邮箱凭据时联调。
+type SMTPConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	From     string `mapstructure:"from"`      // e.g. "noreply@llmhub.io"
+	FromName string `mapstructure:"from_name"` // e.g. "LLMHub"
 }
 
 type HTTPConfig struct {

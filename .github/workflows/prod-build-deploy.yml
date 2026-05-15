@@ -1,0 +1,242 @@
+# ============================================================
+# 正式环境：构建带版本号的镜像 → 打 git tag → 部署到 prod 主机
+#
+# 触发：手动 workflow_dispatch（输入版本号 + 二次确认 DEPLOY）
+#
+# 流程：
+#   1) guard   校验版本号格式 / DEPLOY 二次确认 / git tag 不可重复
+#   2) build   构建并推送 ${REGISTRY_URL}/llmhub-<service>:${version}
+#              同时推送 ${REGISTRY_URL}/llmhub-<service>:latest
+#   3) tag     给当前 commit 打 git tag = version 并推送
+#   4) deploy  SCP compose → SSH docker compose pull && up -d
+#
+# 通用 Variables（与 dev 共用，不加 LLMHUB_ 前缀）：
+#   REGISTRY_URL              私有 registry 地址
+#   REGISTRY_USER             registry 用户名
+# 通用 Secrets：
+#   REGISTRY_PASS             registry 密码
+#
+# 部署相关 Variables（仅本仓库 prod 部署使用，加 LLMHUB_ 前缀）：
+#   LLMHUB_PROD_PUBLIC_URL    生产对外地址（仅展示）
+#   LLMHUB_PROD_SSH_HOST      prod 主机
+#   LLMHUB_PROD_SSH_USER      SSH 用户
+#   LLMHUB_PROD_SSH_PORT      SSH 端口（可选，默认 22）
+#   LLMHUB_PROD_DEPLOY_DIR    主机上 docker compose 工作目录（含 .env）
+# 部署相关 Secrets：
+#   LLMHUB_PROD_SSH_KEY       prod 主机 SSH 私钥（PEM 整段）
+# ============================================================
+name: Prod Build & Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 0.1.0，必须形如 X.Y.Z）'
+        required: true
+        type: string
+      confirm:
+        description: '输入 DEPLOY 二次确认上线'
+        required: true
+        type: string
+
+concurrency:
+  group: prod-build-deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: llmhub
+
+jobs:
+  guard:
+    name: 校验输入 + 检查 git tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 校验版本号格式
+        env:
+          VER: ${{ inputs.version }}
+        run: |
+          if [[ ! "${VER}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version 必须形如 0.1.0，当前: ${VER}"
+            exit 1
+          fi
+
+      - name: 校验确认 token
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [[ "${CONFIRM}" != "DEPLOY" ]]; then
+            echo "请在 confirm 输入 DEPLOY 进行二次确认"
+            exit 1
+          fi
+
+      - name: 检查 git tag 是否已存在
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          if git ls-remote --tags "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git" \
+              | grep -q "refs/tags/${VER}$"; then
+            echo "git tag ${VER} 已存在，请换一个版本号（避免覆盖已发布版本）"
+            exit 1
+          fi
+
+  build:
+    name: 构建并推送正式镜像
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - { name: api, ctx: app,     dockerfile: app/deploy/Dockerfile }
+          - { name: web, ctx: app/web, dockerfile: app/web/Dockerfile }
+
+    steps:
+      - name: 检出 main
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin main
+          git checkout FETCH_HEAD
+          echo "构建 commit: $(git rev-parse HEAD)"
+
+      - name: 登录私有镜像仓库
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+        run: |
+          echo "${REGISTRY_PASS}" | docker login "${REGISTRY_URL}" -u "${REGISTRY_USER}" --password-stdin
+
+      - name: 构建并推送 ${{ matrix.component.name }} (version + latest)
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          VER: ${{ inputs.version }}
+        run: |
+          IMG_BASE="${REGISTRY_URL}/${IMAGE_PREFIX}-${{ matrix.component.name }}"
+          IMG_VER="${IMG_BASE}:${VER}"
+          IMG_LATEST="${IMG_BASE}:latest"
+          docker build --network=host \
+            -f ${{ matrix.component.dockerfile }} \
+            -t "${IMG_VER}" -t "${IMG_LATEST}" \
+            ${{ matrix.component.ctx }}
+          docker push "${IMG_VER}"
+          docker push "${IMG_LATEST}"
+
+  tag:
+    name: 打 git tag
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检出 main
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin main
+          git checkout FETCH_HEAD
+
+      - name: 打 tag 并推送
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          git tag "${VER}"
+          git push "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git" "${VER}"
+
+  deploy:
+    name: 部署到 prod 主机
+    needs: tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ vars.LLMHUB_PROD_PUBLIC_URL }}
+
+    steps:
+      - name: 检出 tag ${{ inputs.version }}
+        env:
+          TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version }}
+        run: |
+          git init -b main .
+          git remote add origin "http://oauth2:${TOKEN}@gitea:3000/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "refs/tags/${VER}:refs/tags/${VER}"
+          git checkout "${VER}"
+          echo "部署 commit: $(git rev-parse HEAD)"
+
+      - name: 准备 SSH 密钥
+        env:
+          KEY: ${{ secrets.LLMHUB_PROD_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ vars.LLMHUB_PROD_SSH_PORT || 22 }}" -H "${{ vars.LLMHUB_PROD_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: 同步 compose + .env.example 到 prod 主机
+        env:
+          PORT: ${{ vars.LLMHUB_PROD_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.LLMHUB_PROD_SSH_USER }}@${{ vars.LLMHUB_PROD_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.LLMHUB_PROD_DEPLOY_DIR }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" "mkdir -p '$DEPLOY_DIR'"
+          # docker-compose.yml 和 .env.example 每次都覆盖。
+          # 真正的 .env（含 secret）由运维维护，CI 不触碰。
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            app/deploy/prod/docker-compose.yml \
+            app/deploy/prod/.env.example \
+            "$USER_HOST:$DEPLOY_DIR/"
+
+      - name: 拉镜像 + 滚动重启
+        env:
+          PORT: ${{ vars.LLMHUB_PROD_SSH_PORT || 22 }}
+          USER_HOST: ${{ vars.LLMHUB_PROD_SSH_USER }}@${{ vars.LLMHUB_PROD_SSH_HOST }}
+          DEPLOY_DIR: ${{ vars.LLMHUB_PROD_DEPLOY_DIR }}
+          REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASS: ${{ secrets.REGISTRY_PASS }}
+          VER: ${{ inputs.version }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER_HOST" \
+            REGISTRY_URL="$REGISTRY_URL" REGISTRY_USER="$REGISTRY_USER" REGISTRY_PASS="$REGISTRY_PASS" \
+            DEPLOY_DIR="$DEPLOY_DIR" VER="$VER" 'bash -s' << 'EOSSH'
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          if [ ! -f .env ]; then
+            echo "❌ $DEPLOY_DIR/.env 不存在 —— 首次部署请按 .env.example 创建并填好真实值"
+            exit 1
+          fi
+          missing=$(comm -23 \
+            <(grep -E '^[A-Z_]+=' .env.example | cut -d= -f1 | sort) \
+            <(grep -E '^[A-Z_]+=' .env         | cut -d= -f1 | sort) || true)
+          if [ -n "$missing" ]; then
+            echo "⚠️  .env 缺少以下字段（来自最新 .env.example），请补齐："
+            echo "$missing"
+          fi
+          export IMAGE_TAG="$VER"
+          echo "$REGISTRY_PASS" | docker login "$REGISTRY_URL" -u "$REGISTRY_USER" --password-stdin
+          docker compose pull
+          docker compose up -d --remove-orphans
+          sleep 5
+          docker compose ps
+          docker compose exec -T api wget -qO- http://localhost:8080/health \
+            || (echo "❌ api /health 失败，请查看 docker logs"; exit 1)
+          EOSSH
+
+      - name: 部署摘要
+        if: always()
+        run: |
+          echo "### 🚀 上线 llmhub ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像: \`${{ vars.REGISTRY_URL }}/${IMAGE_PREFIX}-*:${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- latest: \`${{ vars.REGISTRY_URL }}/${IMAGE_PREFIX}-*:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- git tag: \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 主机: \`${{ vars.LLMHUB_PROD_SSH_HOST }}:${{ vars.LLMHUB_PROD_SSH_PORT || 22 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 入口: ${{ vars.LLMHUB_PROD_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 触发: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

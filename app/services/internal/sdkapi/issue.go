@@ -70,98 +70,127 @@ func (s *Server) handleIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 2: SKU.
-	sku, err := s.d.Catalog.LookupSKU(r.Context(), req.SKUID)
-	if err != nil {
-		if errors.Is(err, catalogrepo.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "sku_not_found", "unknown sku: "+req.SKUID)
-			return
-		}
-		s.d.Logger.ErrorContext(r.Context(), "issue: sku lookup", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal_error", "sku lookup failed")
+	resp, ierr := s.IssueLease(r.Context(), IssueParams{
+		UserID:            auth.UserID,
+		APIKeyID:          auth.APIKeyID,
+		SKUID:             req.SKUID,
+		ClientFingerprint: req.ClientFingerprint,
+		ClientIP:          parseClientIP(r),
+	})
+	if ierr != nil {
+		writeError(w, ierr.Status, ierr.Code, ierr.Message)
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// IssueParams is the input to IssueLease. Caller is responsible for
+// resolving (UserID, APIKeyID) from whichever auth mechanism applies
+// (Bearer api_key for the SDK path; session cookie for the console
+// "在线测试" path; etc.). The lease-issuing core is identical regardless.
+type IssueParams struct {
+	UserID            int64
+	APIKeyID          int64
+	SKUID             string
+	ClientFingerprint string
+	ClientIP          *net.IP
+}
+
+// IssueError carries the HTTP-shaped diagnostic for an IssueLease
+// failure so callers can map it onto the right wire response.
+type IssueError struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e *IssueError) Error() string { return e.Code + ": " + e.Message }
+
+// IssueLease runs the full lease-issuing pipeline (sku → subscription →
+// quota → binding pick → vault resolve → lease insert) given an already-
+// authenticated (user, api_key) pair. Exported so the user-console test
+// endpoint can reuse it without going through Bearer auth.
+func (s *Server) IssueLease(ctx context.Context, p IssueParams) (*IssueResponse, *IssueError) {
+	// Step 2: SKU.
+	sku, err := s.d.Catalog.LookupSKU(ctx, p.SKUID)
+	if err != nil {
+		if errors.Is(err, catalogrepo.ErrNotFound) {
+			return nil, &IssueError{Status: http.StatusNotFound, Code: "sku_not_found", Message: "unknown sku: " + p.SKUID}
+		}
+		s.d.Logger.ErrorContext(ctx, "issue: sku lookup", "err", err)
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "internal_error", Message: "sku lookup failed"}
+	}
 	if sku.Status != "active" {
-		writeError(w, http.StatusGone, "sku_deprecated", "sku is not active: "+sku.Status)
-		return
+		return nil, &IssueError{Status: http.StatusGone, Code: "sku_deprecated", Message: "sku is not active: " + sku.Status}
 	}
 
 	// Step 3 + 4: subscription + quota.
-	sub, err := s.d.Subs.GetActiveByUserSKU(r.Context(), auth.UserID, req.SKUID)
+	sub, err := s.d.Subs.GetActiveByUserSKU(ctx, p.UserID, p.SKUID)
 	if err != nil {
 		if errors.Is(err, iamrepo.ErrNotFound) {
-			writeError(w, http.StatusForbidden, "not_subscribed",
-				"user has no active subscription for sku: "+req.SKUID)
-			return
+			return nil, &IssueError{Status: http.StatusForbidden, Code: "not_subscribed",
+				Message: "user has no active subscription for sku: " + p.SKUID}
 		}
-		s.d.Logger.ErrorContext(r.Context(), "issue: subscription lookup", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal_error", "subscription lookup failed")
-		return
+		s.d.Logger.ErrorContext(ctx, "issue: subscription lookup", "err", err)
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "internal_error", Message: "subscription lookup failed"}
 	}
 	if sub.QuotaUsed >= sub.QuotaTotal {
-		writeError(w, http.StatusPaymentRequired, "quota_exceeded",
-			"subscription quota exhausted; please upgrade or wait for renewal")
-		return
+		return nil, &IssueError{Status: http.StatusPaymentRequired, Code: "quota_exceeded",
+			Message: "subscription quota exhausted; please upgrade or wait for renewal"}
 	}
 	if sub.DailyQuotaLimit != nil && sub.DailyUsed >= *sub.DailyQuotaLimit {
-		writeError(w, http.StatusPaymentRequired, "daily_quota_exceeded",
-			"daily quota exhausted")
-		return
+		return nil, &IssueError{Status: http.StatusPaymentRequired, Code: "daily_quota_exceeded", Message: "daily quota exhausted"}
 	}
 
 	// Step 5: pick a binding under (vendor_product, capability).
-	picks, err := s.d.Pool.PickBinding(r.Context(), sku.VendorProductID, sku.Capability, 40)
+	picks, err := s.d.Pool.PickBinding(ctx, sku.VendorProductID, sku.Capability, 40)
 	if err != nil {
-		s.d.Logger.ErrorContext(r.Context(), "issue: pick binding", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal_error", "binding pick failed")
-		return
+		s.d.Logger.ErrorContext(ctx, "issue: pick binding", "err", err)
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "internal_error", Message: "binding pick failed"}
 	}
 	if len(picks) == 0 {
-		writeError(w, http.StatusServiceUnavailable, "no_binding_available",
-			"no healthy upstream binding available; the operator has been notified")
-		return
+		return nil, &IssueError{Status: http.StatusServiceUnavailable, Code: "no_binding_available",
+			Message: "no healthy upstream binding available; the operator has been notified"}
 	}
 	chosen := picks[0]
 
 	// Step 6: vault.
-	authPayload, err := s.d.Vault.Resolve(r.Context(), chosen.AuthPayloadRef)
+	authPayload, err := s.d.Vault.Resolve(ctx, chosen.AuthPayloadRef)
 	if err != nil {
-		s.d.Logger.ErrorContext(r.Context(), "issue: vault resolve", "err", err, "ref", chosen.AuthPayloadRef)
-		writeError(w, http.StatusInternalServerError, "vault_error", "credential resolution failed")
-		return
+		s.d.Logger.ErrorContext(ctx, "issue: vault resolve", "err", err, "ref", chosen.AuthPayloadRef)
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "vault_error", Message: "credential resolution failed"}
 	}
 	if len(authPayload) == 0 {
-		writeError(w, http.StatusInternalServerError, "vault_error", "credential resolved to empty payload")
-		return
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "vault_error", Message: "credential resolved to empty payload"}
 	}
 
 	// Step 7: persist lease.
 	now := time.Now()
 	expires := now.Add(time.Duration(s.d.LeaseTTLSec) * time.Second)
-	clientIP := parseClientIP(r)
 	lease := &poolrepo.Lease{
-		UserID:            auth.UserID,
-		APIKeyID:          auth.APIKeyID,
+		UserID:            p.UserID,
+		APIKeyID:          p.APIKeyID,
 		SKUID:             sku.ID,
 		BindingID:         chosen.BindingID,
 		CredentialID:      chosen.CredentialID,
-		ClientFingerprint: req.ClientFingerprint,
-		ClientIP:          clientIP,
+		ClientFingerprint: p.ClientFingerprint,
+		ClientIP:          p.ClientIP,
 		ExpiresAt:         expires,
 	}
-	leaseUUID, err := s.d.Pool.Repo().Leases().Create(r.Context(), lease)
+	leaseUUID, err := s.d.Pool.Repo().Leases().Create(ctx, lease)
 	if err != nil {
-		s.d.Logger.ErrorContext(r.Context(), "issue: lease insert", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal_error", "lease persist failed")
-		return
+		s.d.Logger.ErrorContext(ctx, "issue: lease insert", "err", err)
+		return nil, &IssueError{Status: http.StatusInternalServerError, Code: "internal_error", Message: "lease persist failed"}
 	}
+	_ = now
 
 	// Resolve endpoint + protocol_family from the static catalog. Falling
 	// back to whatever's in the SKU's product entry keeps the SDK self-
 	// contained — it only needs lease + endpoint + auth, not full DB access.
 	endpoint, proto := lookupProductHints(chosen.ProductID)
 
-	resp := IssueResponse{
+	return &IssueResponse{
 		LeaseID:        leaseUUID,
 		ExpiresAt:      expires,
 		IssuedAt:       lease.IssuedAt,
@@ -172,9 +201,7 @@ func (s *Server) handleIssue(w http.ResponseWriter, r *http.Request) {
 		Endpoint:       endpoint,
 		ProtocolFamily: proto,
 		AuthPayload:    authPayload,
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, resp)
+	}, nil
 }
 
 // parseClientIP best-effort extracts the SDK caller's IP. RealIP middleware

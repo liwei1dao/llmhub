@@ -50,15 +50,15 @@ function Header() {
           <Link href="/docs">文档</Link>
         </nav>
         <div className="flex items-center gap-3">
-          <a href="http://localhost:3001" className="hidden text-sm text-ink-700 md:inline">
+          <Link href="/login" className="hidden text-sm text-ink-700 md:inline">
             登录
-          </a>
-          <a
-            href="http://localhost:3001/register"
+          </Link>
+          <Link
+            href="/register"
             className="rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-ink-800"
           >
             免费注册
-          </a>
+          </Link>
         </div>
       </div>
     </header>
@@ -88,12 +88,12 @@ function Hero() {
             按量计费，无套餐门槛，毫秒级故障切换。
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="http://localhost:3001/register"
+            <Link
+              href="/register"
               className="rounded-xl bg-ink-900 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-ink-800"
             >
               立即开始 →
-            </a>
+            </Link>
             <Link
               href="/docs"
               className="rounded-xl border border-ink-200 bg-white px-6 py-3 text-sm font-medium text-ink-800 hover:bg-ink-50"
@@ -230,8 +230,8 @@ function Plan({
           </li>
         ))}
       </ul>
-      <a
-        href="http://localhost:3001/register"
+      <Link
+        href="/register"
         className={`mt-8 block rounded-xl px-4 py-2.5 text-center text-sm font-medium ${
           highlight
             ? 'bg-ink-900 text-white hover:bg-ink-800'
@@ -239,7 +239,7 @@ function Plan({
         }`}
       >
         立即开通
-      </a>
+      </Link>
     </div>
   );
 }
@@ -250,12 +250,12 @@ function CTA() {
       <div className="mx-auto max-w-4xl px-6 text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">几分钟接通你的第一次调用</h2>
         <p className="mt-4 text-ink-200">注册即送测试额度，文档与样例代码开箱即用。</p>
-        <a
-          href="http://localhost:3001/register"
+        <Link
+          href="/register"
           className="mt-8 inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-ink-200"
         >
           免费创建 API Key
-        </a>
+        </Link>
       </div>
     </section>
   );

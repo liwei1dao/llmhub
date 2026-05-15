@@ -44,7 +44,8 @@ export default function NewCredentialWizardPage() {
   const [accountID, setAccountID] = useState<number | null>(null);
   const [productID, setProductID] = useState<string>('');
   const [name, setName] = useState('');
-  const [env, setEnv] = useState('production');
+  // 凭据的 env 字段 DB 必填且默认 production；当前阶段不暴露给运营选择。
+  const env = 'production';
   const [authPayload, setAuthPayload] = useState<Record<string, string>>({});
   const [bindings, setBindings] = useState<BindingDraft[]>([]);
 
@@ -205,10 +206,8 @@ export default function NewCredentialWizardPage() {
         <Step3
           product={product}
           name={name}
-          env={env}
           authPayload={authPayload}
           onChangeName={setName}
-          onChangeEnv={setEnv}
           onChangeField={(k, v) => setAuthPayload((p) => ({ ...p, [k]: v }))}
         />
       ) : null}
@@ -224,7 +223,6 @@ export default function NewCredentialWizardPage() {
           account={account}
           product={product}
           name={name}
-          env={env}
           bindings={bindings.filter((b) => b.selected)}
         />
       ) : null}
@@ -388,18 +386,14 @@ function Step2({
 function Step3({
   product,
   name,
-  env,
   authPayload,
   onChangeName,
-  onChangeEnv,
   onChangeField,
 }: {
   product: VendorProduct;
   name: string;
-  env: string;
   authPayload: Record<string, string>;
   onChangeName: (v: string) => void;
-  onChangeEnv: (v: string) => void;
   onChangeField: (k: string, v: string) => void;
 }) {
   return (
@@ -409,18 +403,6 @@ function Step3({
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="凭据名称 *" value={name} onChange={onChangeName} placeholder="方舟应用-生产" />
-        <label className="block">
-          <span className="text-xs text-ink-500">环境</span>
-          <select
-            value={env}
-            onChange={(e) => onChangeEnv(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm"
-          >
-            <option value="production">production</option>
-            <option value="staging">staging</option>
-            <option value="trial">trial</option>
-          </select>
-        </label>
         {product.credential_schema.map((f) => (
           <Field
             key={f.key}
@@ -537,13 +519,11 @@ function Step5({
   account,
   product,
   name,
-  env,
   bindings,
 }: {
   account: VendorAccount;
   product: VendorProduct;
   name: string;
-  env: string;
   bindings: BindingDraft[];
 }) {
   return (
@@ -563,10 +543,6 @@ function Step5({
             <tr>
               <td className="px-3 py-2 w-32 text-xs text-ink-500">名称</td>
               <td className="px-3 py-2">{name}</td>
-            </tr>
-            <tr>
-              <td className="px-3 py-2 text-xs text-ink-500">环境</td>
-              <td className="px-3 py-2">{env}</td>
             </tr>
           </tbody>
         </table>
