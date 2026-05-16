@@ -1,0 +1,43 @@
+# Put cargo's `target/` next to the cross-vendor `core/` crates rather
+# than at the workspace root, so the top-level layout stays clean
+# (only `core/`, `vendors/`, and config files at app/sdks/).
+# Path is relative to *this file's parent* — i.e. app/sdks — so
+# `core/target` resolves to app/sdks/core/target.
+[build]
+target-dir = "core/target"
+
+# Per-target Android hardening. cargo-ndk injects the right linker;
+# here we only add codegen flags that further shrink and harden the
+# output. Keep additions backward-compatible — anything unsupported on
+# stable should live behind a feature, not here.
+[target.aarch64-linux-android]
+rustflags = [
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "link-arg=-Wl,--icf=all",
+    "-C", "link-arg=-Wl,-z,relro,-z,now",
+    "-C", "link-arg=-Wl,--exclude-libs,ALL",
+]
+
+[target.armv7-linux-androideabi]
+rustflags = [
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "link-arg=-Wl,--icf=all",
+    "-C", "link-arg=-Wl,-z,relro,-z,now",
+    "-C", "link-arg=-Wl,--exclude-libs,ALL",
+]
+
+[target.x86_64-linux-android]
+rustflags = [
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "link-arg=-Wl,--icf=all",
+    "-C", "link-arg=-Wl,-z,relro,-z,now",
+    "-C", "link-arg=-Wl,--exclude-libs,ALL",
+]
+
+[target.i686-linux-android]
+rustflags = [
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "link-arg=-Wl,--icf=all",
+    "-C", "link-arg=-Wl,-z,relro,-z,now",
+    "-C", "link-arg=-Wl,--exclude-libs,ALL",
+]

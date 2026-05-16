@@ -1,0 +1,23 @@
+[package]
+name        = "llmhub-chat-openai-ffi-android"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish     = false
+description = "JNI cdylib that wraps the chat-openai capability for Android."
+
+# Per-service cdylib. Lib name stays short so Android's
+# `System.loadLibrary("llmhub_chat_openai")` doesn't need to spell the
+# crate name. Each service ships its own .so this way.
+[lib]
+name       = "llmhub_chat_openai"
+crate-type = ["cdylib"]
+
+[dependencies]
+llmhub-core        = { workspace = true }
+llmhub-chat-openai = { workspace = true }
+jni                = { workspace = true }
+serde_json         = { workspace = true }
+log                = { workspace = true }
+litcrypt2          = { workspace = true }

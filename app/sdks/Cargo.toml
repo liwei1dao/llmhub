@@ -1,0 +1,57 @@
+[workspace]
+resolver = "2"
+# Top-level layout:
+#   core/      cross-vendor shared crates (lease, transport, report)
+#   vendors/   per-vendor SDKs, each grouped as
+#              <vendor>/{core, android, ios, …}.
+# The inner `core/` under a vendor holds that vendor's native crates;
+# the top-level `core/` is the cross-cutting "kernel".
+members = [
+    "core/llmhub-core",
+    "vendors/chat-openai/core/capability",
+    "vendors/chat-openai/core/ffi-android",
+    "vendors/chat-openai/core/ffi-ios",
+]
+
+[workspace.package]
+version      = "0.1.0"
+edition      = "2021"
+rust-version = "1.86"
+license      = "Proprietary"
+authors      = ["LLMHub <dev@llmhub.io>"]
+publish      = false
+
+[workspace.dependencies]
+llmhub-core        = { path = "core/llmhub-core" }
+llmhub-chat-openai = { path = "vendors/chat-openai/core/capability" }
+
+# HTTP + TLS — rustls keeps us off OpenSSL on Android / iOS.
+ureq       = { version = "2.10", default-features = false, features = ["tls", "json"] }
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+thiserror = "1"
+log       = "0.4"
+
+# JNI for Android; iOS uses raw C ABI via ffi-ios.
+jni       = { version = "0.21", default-features = false }
+
+# Compile-time string encryption — replaces every wrapped literal with
+# an XOR-encrypted blob decoded only at runtime. Raises the bar for
+# strings -based RE without preventing it entirely.
+litcrypt2 = "0.1"
+
+# Strong release profile — applies to every crate in the workspace.
+# Goals: strip symbols, fold codegen units for max LTO, drop panic
+# unwinder, prefer size.
+[profile.release]
+opt-level     = "z"
+lto           = "fat"
+codegen-units = 1
+panic         = "abort"
+strip         = "symbols"
+incremental   = false
+overflow-checks = false
+
+[profile.release.package."*"]
+opt-level = "z"

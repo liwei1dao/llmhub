@@ -1,0 +1,12 @@
+[toolchain]
+# 1.86 is the floor: edition2024 + icu_* 2.2 MSRV. Bump together as
+# upstreams move.
+channel = "1.86.0"
+components = ["rustfmt", "clippy"]
+targets = [
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "x86_64-linux-android",
+    "i686-linux-android",
+]
+profile = "minimal"

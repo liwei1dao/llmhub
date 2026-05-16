@@ -1,0 +1,29 @@
+# Rust workspace build output. Redirected to core/target by
+# .cargo/config.toml — keep both patterns so manual `cargo build`
+# from a subdirectory (which falls back to ./target) is also ignored.
+/target/
+/core/target/
+**/Cargo.lock.bak
+
+# Android / Gradle (chat-openai/android, future-service/android, …)
+**/android/.gradle/
+**/android/**/build/
+**/android/**/.idea/
+**/android/**/local.properties
+**/android/**/captures/
+
+# Android native libs are *produced* by build-android.sh, not committed.
+**/android/**/src/main/jniLibs/*/
+
+# iOS XCFramework is *produced* by build-ios.sh, not committed.
+# The xcframework now lives next to Package.swift (no Frameworks/ subdir).
+**/ios/**/*.xcframework/
+**/ios/**/build/
+**/ios/**/.swiftpm/
+**/ios/**/.build/
+**/ios/**/DerivedData/
+
+# IDE
+.vscode/
+*.iml
+.idea/

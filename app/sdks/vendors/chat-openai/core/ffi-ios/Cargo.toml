@@ -1,0 +1,25 @@
+[package]
+name        = "llmhub-chat-openai-ffi-ios"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish     = false
+description = "C-ABI staticlib that wraps the chat-openai capability for iOS / macOS."
+
+# `staticlib` → libllmhub_chat_openai.a; combined into an XCFramework
+# by `scripts/build-ios.sh`. Lib name stays short so the Swift package's
+# `LLMHubChatC` umbrella header refers to it directly.
+[lib]
+name       = "llmhub_chat_openai"
+crate-type = ["staticlib"]
+
+[dependencies]
+llmhub-core        = { workspace = true }
+llmhub-chat-openai = { workspace = true }
+serde_json         = { workspace = true }
+log                = { workspace = true }
+
+# The C header is generated out-of-band by `scripts/build-ios.sh`
+# (which runs cbindgen). Keeping cbindgen out of build-dependencies
+# means a plain `cargo build` doesn't pay for it.
